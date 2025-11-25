@@ -1,0 +1,45 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="d-flex align-items-center">
+  {% if user_profile.profile_image %}
+    <img src="{{ user_profile.profile_image.url }}" width="80" height="80" class="rounded-circle me-3">
+  {% endif %}
+  <div>
+    <h3>{{ user_profile.username }}</h3>
+    <p>{{ user_profile.bio }}</p>
+    <p>{{ followers_count }} followers • {{ following_count }} following</p>
+
+    {% if user != user_profile %}
+      <form id="follow-form" method="post" action="{% url 'follow_toggle' user_profile.username %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary">{{ is_following|yesno:"Unfollow,Follow" }}</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+<hr>
+<h4>Posts</h4>
+<div class="row">
+  {% for post in posts %}
+  <div class="col-md-4 mb-3">
+    <img src="{{ post.image.url }}" class="img-fluid">
+    <p>{{ post.caption }}</p>
+  </div>
+  {% empty %}
+  <p>No posts yet.</p>
+  {% endfor %}
+</div>
+
+<script>
+document.getElementById("follow-form")?.addEventListener("submit", async function(e){
+  e.preventDefault();
+  const res = await fetch(this.action, {
+    method: "POST",
+    headers: {'X-CSRFToken': '{{ csrf_token }}'}
+  });
+  const data = await res.json();
+  alert("You have " + data.state);
+  location.reload();
+});
+</script>
+{% endblock %}
