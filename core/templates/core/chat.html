@@ -37,7 +37,6 @@
                     data-action="delete_for_me">
               Delete for me
             </button>
-
             <button class="delete-btn btn btn-sm btn-outline-warning"
                     data-id="{{ msg.id }}" 
                     data-action="delete_for_everyone">
@@ -67,13 +66,15 @@
     <button id="mic" class="btn btn-outline-secondary">🎤</button>
   </div>
 
+  <!-- Recording status -->
+  <div id="record-status" style="display:none; margin-top:8px; text-align:center;">
+    <span id="timer">0:00</span> • Recording... (<a href="#" id="cancel-record">Cancel</a>)
+  </div>
+
 </div>
 
-
 <script>
-/* --------------------------------------------------------
-   Utility
----------------------------------------------------------*/
+/* -------------------- UTILITY -------------------- */
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -98,57 +99,44 @@ const currentUser  = "{{ request.user.username }}";
 /* Scroll to bottom on load */
 messagesBox.scrollTop = messagesBox.scrollHeight;
 
-
-/* --------------------------------------------------------
-   Append message to chat
----------------------------------------------------------*/
+/* -------------------- APPEND MESSAGE -------------------- */
 function appendMessage(data) {
-    let html = `
-      <div class="message" id="msg-${data.message_id}" style="margin-bottom:8px;">
-        <strong>${data.sender}:</strong>
-    `;
+    let html = `<div class="message" id="msg-${data.message_id}" style="margin-bottom:8px;">
+                    <strong>${data.sender}:</strong>`;
 
-    if (data.content)
-        html += `<div>${data.content}</div>`;
-
-    if (data.image)
-        html += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
-
-    if (data.audio)
-        html += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
+    if (data.content) html += `<div>${data.content}</div>`;
+    if (data.image)   html += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
+    if (data.audio)   html += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
 
     html += `<div>`;
-
     if (data.sender === currentUser) {
-        html += `
-          <button class="delete-btn btn btn-sm btn-outline-danger"
-                  data-id="${data.message_id}" data-action="delete_for_me">
-            Delete for me
-          </button>
-          <button class="delete-btn btn btn-sm btn-outline-warning"
-                  data-id="${data.message_id}" data-action="delete_for_everyone">
-            Delete for everyone
-          </button>`;
+        html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>
+                 <button class="delete-btn btn btn-sm btn-outline-warning" data-id="${data.message_id}" data-action="delete_for_everyone">Delete for everyone</button>`;
     } else {
-        html += `
-          <button class="delete-btn btn btn-sm btn-outline-danger"
-                  data-id="${data.message_id}" data-action="delete_for_me">
-            Delete for me
-          </button>`;
+        html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>`;
     }
-
     html += `</div></div>`;
 
     messagesBox.innerHTML += html;
     messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
+/* -------------------- SEND TEXT / AUDIO MESSAGE -------------------- */
+let mediaRecorder;
+let audioChunks = [];
+let seconds = 0;
+let interval;
+let isRecording = false;
 
-/* --------------------------------------------------------
-   Send text message
----------------------------------------------------------*/
-sendBtn.addEventListener("click", () => {
+sendBtn.addEventListener("click", async () => {
     const content = msgInput.value.trim();
+
+    if (audioChunks.length > 0) {
+        // Send recorded audio
+        await stopRecording(true);
+        return;
+    }
+
     if (!content) return;
 
     const formData = new FormData();
@@ -166,17 +154,14 @@ sendBtn.addEventListener("click", () => {
     });
 });
 
-
-/* --------------------------------------------------------
-   Send file (image or audio)
----------------------------------------------------------*/
+/* -------------------- SEND FILE (IMAGE/AUDIO) -------------------- */
 fileInput.addEventListener("change", () => {
-    let file = fileInput.files[0];
+    const file = fileInput.files[0];
     if (!file) return;
 
     const formData = new FormData();
-    if (file.type.startsWith("image/"))  formData.append("image", file);
-    if (file.type.startsWith("audio/"))  formData.append("audio", file);
+    if (file.type.startsWith("image/")) formData.append("image", file);
+    if (file.type.startsWith("audio/")) formData.append("audio", file);
 
     fetch("{% url 'send_message' username=other_user.username %}", {
         method: "POST",
@@ -187,10 +172,7 @@ fileInput.addEventListener("change", () => {
     .then(data => appendMessage(data));
 });
 
-
-/* --------------------------------------------------------
-   DELETE MESSAGE (THIS WAS MISSING)
----------------------------------------------------------*/
+/* -------------------- DELETE MESSAGE -------------------- */
 document.addEventListener("click", function (e) {
     if (e.target.classList.contains("delete-btn")) {
         const msgId  = e.target.dataset.id;
@@ -205,7 +187,6 @@ document.addEventListener("click", function (e) {
             if (data.status === "deleted_for_me") {
                 document.getElementById(`msg-${msgId}`).remove();
             }
-
             if (data.status === "deleted_for_everyone") {
                 document.getElementById(`msg-${msgId}`).innerHTML = "<em>Message deleted</em>";
             }
@@ -213,6 +194,93 @@ document.addEventListener("click", function (e) {
     }
 });
 
+/* -------------------- VOICE RECORDING -------------------- */
+const micBtn = document.getElementById("mic");
+const recordStatus = document.getElementById("record-status");
+const timerSpan    = document.getElementById("timer");
+const cancelBtn    = document.getElementById("cancel-record");
+
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+micBtn.addEventListener("click", async () => {
+    if (isRecording) {
+        await stopRecording(true);
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Your browser does not support audio recording.");
+        return;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    recordStatus.style.display = "block";
+    seconds = 0;
+    timerSpan.textContent = formatTime(seconds);
+
+    interval = setInterval(() => {
+        seconds++;
+        timerSpan.textContent = formatTime(seconds);
+    }, 1000);
+});
+
+// Cancel button discards audio
+cancelBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    stopRecording(false); // false = discard recording
+});
+
+async function stopRecording(sendAudio) {
+    if (!isRecording) return;
+    isRecording = false;
+
+    clearInterval(interval);
+    recordStatus.style.display = "none";
+    timerSpan.textContent = formatTime(0);
+
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        await new Promise(resolve => {
+            mediaRecorder.onstop = resolve;
+            mediaRecorder.stop();
+        });
+    }
+
+    if (!sendAudio) {
+        audioChunks = [];
+        return;
+    }
+
+    if (audioChunks.length === 0) return;
+
+    const blob = new Blob(audioChunks, { type: "audio/mpeg" });
+    const file = new File([blob], `voice_${Date.now()}.mp3`, { type: "audio/mpeg" });
+
+    const formData = new FormData();
+    formData.append("audio", file);
+
+    const res = await fetch("{% url 'send_message' username=other_user.username %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData
+    });
+    const data = await res.json();
+    appendMessage(data);
+
+    audioChunks = [];
+}
 </script>
 
 {% endblock %}
