@@ -1,32 +1,58 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% block content %}
+
 <div class="chat-container" style="max-width:600px; margin:auto;">
+
   <h3>Chat with {{ other_user.username }}</h3>
 
   <!-- Messages -->
-  <div id="messages" style="height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:10px; padding:10px; margin-bottom:10px;">
+  <div id="messages" 
+       style="height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:10px; padding:10px; margin-bottom:10px;">
+
     {% for msg in messages %}
-        <div class="message" id="msg-{{ msg.id }}" style="margin-bottom:8px;">
-          <strong>{{ msg.sender.username }}:</strong>
-          {% if msg.content %}<div>{{ msg.content }}</div>{% endif %}
-          {% if msg.image %}
-            <div><img src="{{ msg.image.url }}" style="max-width:90%; border-radius:6px;"></div>
-          {% endif %}
-          {% if msg.audio %}
-            <div><audio controls preload="none" style="width:90%;">
-              <source src="{{ msg.audio.url }}" type="audio/mpeg">
-            </audio></div>
-          {% endif %}
+      <div class="message" id="msg-{{ msg.id }}" style="margin-bottom:8px;">
+        <strong>{{ msg.sender.username }}:</strong>
+
+        {% if msg.content %}
+          <div>{{ msg.content }}</div>
+        {% endif %}
+
+        {% if msg.image %}
+          <div><img src="{{ msg.image.url }}" style="max-width:90%; border-radius:6px;"></div>
+        {% endif %}
+
+        {% if msg.audio %}
           <div>
-            {% if msg.sender == request.user %}
-              <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
-              <button class="delete-btn btn btn-sm btn-outline-warning" data-id="{{ msg.id }}" data-action="delete_for_everyone">Delete for everyone</button>
-            {% else %}
-              <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
-            {% endif %}
+            <audio controls preload="none" style="width:90%;">
+              <source src="{{ msg.audio.url }}" type="audio/mpeg">
+            </audio>
           </div>
+        {% endif %}
+
+        <div>
+          {% if msg.sender == request.user %}
+            <button class="delete-btn btn btn-sm btn-outline-danger"
+                    data-id="{{ msg.id }}" 
+                    data-action="delete_for_me">
+              Delete for me
+            </button>
+
+            <button class="delete-btn btn btn-sm btn-outline-warning"
+                    data-id="{{ msg.id }}" 
+                    data-action="delete_for_everyone">
+              Delete for everyone
+            </button>
+          {% else %}
+            <button class="delete-btn btn btn-sm btn-outline-danger"
+                    data-id="{{ msg.id }}" 
+                    data-action="delete_for_me">
+              Delete for me
+            </button>
+          {% endif %}
         </div>
+
+      </div>
     {% endfor %}
   </div>
 
@@ -35,92 +61,158 @@
     <label for="fileInput" style="cursor:pointer;">📎
       <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none;">
     </label>
+
     <input id="msg" class="form-control" placeholder="Type a message..." style="flex:1;">
     <button id="send" class="btn btn-primary">Send</button>
     <button id="mic" class="btn btn-outline-secondary">🎤</button>
   </div>
 
-  <div id="record-status" style="display:none; margin-top:8px; text-align:center;">
-    <span id="timer">0:00</span> • Recording... (<a href="#" id="cancel-record">Cancel</a>)
-  </div>
 </div>
 
+
 <script>
-const messagesBox = document.getElementById("messages");
-const msgInput = document.getElementById("msg");
-const sendBtn = document.getElementById("send");
-const fileInput = document.getElementById("fileInput");
-
+/* --------------------------------------------------------
+   Utility
+---------------------------------------------------------*/
 function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
     }
-  }
-  return cookieValue;
+    return cookieValue;
 }
 
+const messagesBox = document.getElementById("messages");
+const msgInput     = document.getElementById("msg");
+const sendBtn      = document.getElementById("send");
+const fileInput    = document.getElementById("fileInput");
+const currentUser  = "{{ request.user.username }}";
+
+/* Scroll to bottom on load */
+messagesBox.scrollTop = messagesBox.scrollHeight;
+
+
+/* --------------------------------------------------------
+   Append message to chat
+---------------------------------------------------------*/
 function appendMessage(data) {
-  let msgHTML = `<div class="message" id="msg-${data.message_id}"><b>${data.sender}:</b>`;
-  if (data.content) msgHTML += `<div>${data.content}</div>`;
-  if (data.image) msgHTML += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
-  if (data.audio) msgHTML += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
+    let html = `
+      <div class="message" id="msg-${data.message_id}" style="margin-bottom:8px;">
+        <strong>${data.sender}:</strong>
+    `;
 
-  msgHTML += `<div>`;
-  if (data.sender === "{{ request.user.username }}") {
-    msgHTML += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>
-                <button class="delete-btn btn btn-sm btn-outline-warning" data-id="${data.message_id}" data-action="delete_for_everyone">Delete for everyone</button>`;
-  } else {
-    msgHTML += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>`;
-  }
-  msgHTML += `</div></div>`;
+    if (data.content)
+        html += `<div>${data.content}</div>`;
 
-  messagesBox.innerHTML += msgHTML;
-  messagesBox.scrollTop = messagesBox.scrollHeight;
+    if (data.image)
+        html += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
+
+    if (data.audio)
+        html += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
+
+    html += `<div>`;
+
+    if (data.sender === currentUser) {
+        html += `
+          <button class="delete-btn btn btn-sm btn-outline-danger"
+                  data-id="${data.message_id}" data-action="delete_for_me">
+            Delete for me
+          </button>
+          <button class="delete-btn btn btn-sm btn-outline-warning"
+                  data-id="${data.message_id}" data-action="delete_for_everyone">
+            Delete for everyone
+          </button>`;
+    } else {
+        html += `
+          <button class="delete-btn btn btn-sm btn-outline-danger"
+                  data-id="${data.message_id}" data-action="delete_for_me">
+            Delete for me
+          </button>`;
+    }
+
+    html += `</div></div>`;
+
+    messagesBox.innerHTML += html;
+    messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
+
+/* --------------------------------------------------------
+   Send text message
+---------------------------------------------------------*/
 sendBtn.addEventListener("click", () => {
-  const content = msgInput.value.trim();
-  if (!content) return;
+    const content = msgInput.value.trim();
+    if (!content) return;
 
-  const formData = new FormData();
-  formData.append("content", content);
+    const formData = new FormData();
+    formData.append("content", content);
 
-  fetch(`/send-message/{{ other_user.username }}/`, {
-    method: "POST",
-    headers: { "X-CSRFToken": getCookie("csrftoken") },
-    body: formData
-  })
-  .then(res => res.json())
-  .then(data => {
-    appendMessage(data);
-    msgInput.value = "";
-  });
+    fetch("{% url 'send_message' username=other_user.username %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        appendMessage(data);
+        msgInput.value = "";
+    });
 });
 
+
+/* --------------------------------------------------------
+   Send file (image or audio)
+---------------------------------------------------------*/
 fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (!file) return;
+    let file = fileInput.files[0];
+    if (!file) return;
 
-  const formData = new FormData();
-  if (file.type.startsWith("image/")) formData.append("image", file);
-  else if (file.type.startsWith("audio/")) formData.append("audio", file);
+    const formData = new FormData();
+    if (file.type.startsWith("image/"))  formData.append("image", file);
+    if (file.type.startsWith("audio/"))  formData.append("audio", file);
 
-  fetch(`/send-message/{{ other_user.username }}/`, {
-    method: "POST",
-    headers: { "X-CSRFToken": getCookie("csrftoken") },
-    body: formData
-  })
-  .then(res => res.json())
-  .then(data => appendMessage(data));
+    fetch("{% url 'send_message' username=other_user.username %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => appendMessage(data));
 });
 
-// Voice recording system ...
+
+/* --------------------------------------------------------
+   DELETE MESSAGE (THIS WAS MISSING)
+---------------------------------------------------------*/
+document.addEventListener("click", function (e) {
+    if (e.target.classList.contains("delete-btn")) {
+        const msgId  = e.target.dataset.id;
+        const action = e.target.dataset.action;
+
+        fetch(`/delete-message/${msgId}/${action}/`, {
+            method: "POST",
+            headers: { "X-CSRFToken": getCookie("csrftoken") },
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "deleted_for_me") {
+                document.getElementById(`msg-${msgId}`).remove();
+            }
+
+            if (data.status === "deleted_for_everyone") {
+                document.getElementById(`msg-${msgId}`).innerHTML = "<em>Message deleted</em>";
+            }
+        });
+    }
+});
+
 </script>
+
 {% endblock %}

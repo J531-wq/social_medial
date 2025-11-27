@@ -27,14 +27,12 @@ def feed(request):
     following_ids = Follow.objects.filter(follower=request.user).values_list("following_id", flat=True)
     posts = Post.objects.filter(author__id__in=list(following_ids) + [request.user.id])
 
-    # NEW: Get all users (you can exclude the current user if you want)
     all_users = User.objects.exclude(id=request.user.id)
 
     return render(request, "core/feed.html", {
         "posts": posts,
         "all_users": all_users,
     })
-
 
 
 @login_required
@@ -95,7 +93,6 @@ def follow_toggle(request, username):
 def chat_room(request, username):
     other_user = get_object_or_404(User, username=username)
 
-    # Get all messages between the two users
     messages = Message.objects.filter(
         Q(sender=request.user, receiver=other_user) |
         Q(sender=other_user, receiver=request.user)
@@ -105,16 +102,16 @@ def chat_room(request, username):
     visible_messages = [
         m for m in messages
         if not ((m.sender == request.user and m.deleted_for_sender) or
-                (m.receiver == request.user and m.deleted_for_receiver))
+                (m.receiver == request.user and m.deleted_for_receiver) or
+                m.deleted_for_everyone)
     ]
-    
+
     return render(request, "core/chat.html", {"other_user": other_user, "messages": visible_messages})
 
 
 @login_required
 @csrf_exempt
 def send_message(request, username):
-    """Handles sending text, audio, and image messages."""
     if request.method == "POST":
         receiver_user = get_object_or_404(User, username=username)
         content = request.POST.get("content", "").strip()
@@ -124,10 +121,8 @@ def send_message(request, username):
         if not content and not audio_file and not image_file:
             return JsonResponse({"error": "Message cannot be empty"}, status=400)
 
-        # Create the message
         message = Message.objects.create(sender=request.user, receiver=receiver_user, content=content)
 
-        # Save files if provided
         if audio_file:
             message.audio.save(audio_file.name, audio_file)
         if image_file:
@@ -140,6 +135,7 @@ def send_message(request, username):
             "audio": message.audio.url if audio_file else None,
             "image": message.image.url if image_file else None,
             "timestamp": message.timestamp.strftime("%H:%M"),
+            "sender": request.user.username,
         })
 
     return HttpResponseBadRequest("Invalid request")
@@ -147,37 +143,41 @@ def send_message(request, username):
 
 @login_required
 @csrf_exempt
-def delete_message(request, message_id):
-    """Delete a message for me or everyone."""
+def delete_message(request, message_id, action):
+    """Delete a message for me or for everyone."""
     message = get_object_or_404(Message, id=message_id)
 
-    if request.method == "POST":
-        action = request.POST.get("action")
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=400)
 
-        if action == "delete_for_me":
-            if request.user == message.sender:
-                message.deleted_for_sender = True
-            elif request.user == message.receiver:
-                message.deleted_for_receiver = True
-            message.save()
-            return JsonResponse({"status": "deleted_for_me"})
-
-        elif action == "delete_for_everyone":
-            if request.user == message.sender:
-                message.deleted_for_everyone = True
-                if message.audio:
-                    message.audio.delete(save=False)
-                if message.image:
-                    message.image.delete(save=False)
-                message.save()
-                return JsonResponse({"status": "deleted_for_everyone"})
-            else:
-                return JsonResponse({"error": "Only sender can delete for everyone"}, status=403)
-
+    # --- DELETE FOR ME ---
+    if action == "delete_for_me":
+        if request.user == message.sender:
+            message.deleted_for_sender = True
+        elif request.user == message.receiver:
+            message.deleted_for_receiver = True
         else:
-            return JsonResponse({"error": "Invalid action"}, status=400)
+            return JsonResponse({"error": "Not allowed"}, status=403)
+        message.save()
+        return JsonResponse({"status": "deleted_for_me"})
 
-    return JsonResponse({"error": "POST required"}, status=400)
+    # --- DELETE FOR EVERYONE ---
+    elif action == "delete_for_everyone":
+        if request.user != message.sender:
+            return JsonResponse({"error": "Only sender can delete for everyone"}, status=403)
+
+        message.deleted_for_everyone = True
+
+        if message.audio:
+            message.audio.delete(save=False)
+        if message.image:
+            message.image.delete(save=False)
+
+        message.save()
+        return JsonResponse({"status": "deleted_for_everyone"})
+
+    else:
+        return JsonResponse({"error": "Invalid action"}, status=400)
 
 
 # ---------------------- LIKES & COMMENTS ----------------------
