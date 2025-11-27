@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -18,31 +19,49 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    padding-top: 80px; /* space for sticky navbar */
    }
+
+   /* Navbar */
    .navbar {
+    position: fixed;   /* fixed at top */
+    top: 0;
+    width: 100%;
+    z-index: 1030;
     background-color: rgb(244, 243, 217) !important;
-    box-shadow: 0 2px 6px black;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     padding: 0.8rem 1rem;
+    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
    }
-   .navbar-brand {
-    font-weight: bold;
-    font-size: 2.5rem;
-    color: rgb(128, 43, 226) !important;
+
+   /* Add shadow on scroll */
+   .navbar.scrolled {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    background-color: rgb(245, 244, 220) !important;
    }
+
+   /* Logo image visually bold */
+   #weblogo {
+    height: 60px; 
+    width: auto;
+    border-radius: 8px;
+    filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.6));
+    border: 2px solid rgb(128, 43, 226);
+  }
+
+   /* Navbar buttons */
    .navbar .btn {
     border-radius: 25px;
     font-weight: 500;
     margin-left: 0.5rem;
     transition: all 0.2s ease-in-out;
    }
-   .navbar .btn-outline-primary:hover,
-   .navbar .btn-outline-secondary:hover {
-      transform: scale(1.05);
+
+   .navbar .btn:hover {
+    transform: scale(1.05);
    }
 
-   .container {
-    flex-grow: 1;
-   }
+   /* Container styling */
    .container.py-4 {
     background-color: whitesmoke;
     border-radius: 12px;
@@ -50,6 +69,8 @@
     margin-top: 2rem;
     padding: 2rem;
    }
+
+   /* Footer */
    footer {
     background-color: white;
     text-align: center;
@@ -59,9 +80,7 @@
     color: #666;
     border-top: 1px solid whitesmoke;
    }
-   .btn-primary, .btn-outline-primary {
-    border-radius: 25px;
-   }
+
    @media (max-width:768px) {
     .navbar .btn {
       margin-top: 0.4rem;
@@ -76,26 +95,31 @@
 </head>
 
 <body>
-  <nav class="navbar navbar-expand-lg">
+  <nav class="navbar navbar-expand-lg" id="mainNavbar">
     <div class="container d-flex justify-content-between align-items-center">
-      <a class="navbar-brand" href="{% url 'feed' %}">SocialApp</a>
-      <div>
+
+      <!-- Logo only -->
+      <a class="navbar-brand" href="{% url 'feed' %}">
+        <img id="weblogo" src="{% static 'logo.png' %}" alt="Jmedial">
+      </a>
+
+      <!-- Navbar Buttons -->
+      <div class="d-flex align-items-center">
         {% if user.is_authenticated %}
-          <a href="{% url 'feed' %}" class="btn">Home</a>
-          <a href="{% url 'create_post' %}" class="btn">Post</a>
-          <a href="{% url 'profile' username=request.user.username %}" class="btn">Profile</a>
-          <a href="{% url 'chat_room' username=request.user.username %}" class="btn">Chat</a>
+          <a href="{% url 'feed' %}" class="btn btn-outline-primary mx-1">Home</a>
+          <a href="{% url 'create_post' %}" class="btn btn-outline-primary mx-1">Post</a>
+          <a href="{% url 'profile' username=request.user.username %}" class="btn btn-outline-primary mx-1">Profile</a>
+          <a href="{% url 'chat_room' username=request.user.username %}" class="btn btn-outline-primary mx-1">Chat</a>
           <form method="post" action="{% url 'logout' %}" style="display: inline;">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline-secondary">
-                Logout
-            </button>
+            <button type="submit" class="btn btn-outline-secondary mx-1">Logout</button>
           </form>
         {% else %}
-          <a href="{% url 'login' %}" class="btn text-primary">Login</a>
-          <a href="{% url 'signup' %}" class="btn text-primary">Sign Up</a>
+          <a href="{% url 'login' %}" class="btn btn-outline-primary mx-1">Login</a>
+          <a href="{% url 'signup' %}" class="btn btn-outline-primary mx-1">Sign Up</a>
         {% endif %}
       </div>
+
     </div>
   </nav>
 
@@ -109,5 +133,16 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Add shadow effect when scrolling
+    const navbar = document.getElementById('mainNavbar');
+    window.addEventListener('scroll', () => {
+      if(window.scrollY > 10){
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+  </script>
 </body>
 </html>

@@ -26,7 +26,15 @@ def signup(request):
 def feed(request):
     following_ids = Follow.objects.filter(follower=request.user).values_list("following_id", flat=True)
     posts = Post.objects.filter(author__id__in=list(following_ids) + [request.user.id])
-    return render(request, "core/feed.html", {"posts": posts})
+
+    # NEW: Get all users (you can exclude the current user if you want)
+    all_users = User.objects.exclude(id=request.user.id)
+
+    return render(request, "core/feed.html", {
+        "posts": posts,
+        "all_users": all_users,
+    })
+
 
 
 @login_required

@@ -3,6 +3,18 @@
 {% block title %}Your Feed{% endblock %}
 
 {% block content %}
+<!-- USERS HORIZONTAL LIST -->
+<div style="display: flex; overflow-x: auto; padding: 10px; gap: 15px; border-bottom: 1px solid #eee;">
+    {% for u in all_users %}
+        <a href="{% url 'profile' u.username %}" style="text-align: center; text-decoration: none; color: inherit;">
+            <img src="{{ u.profile_picture.url }}" 
+                 alt="{{ u.username }}" 
+                 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+            <div style="font-size: 12px; margin-top: 5px;">{{ u.username }}</div>
+        </a>
+    {% endfor %}
+</div>
+
 <h3>Your Feed</h3>
 
 {% for post in posts %}

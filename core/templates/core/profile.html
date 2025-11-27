@@ -12,34 +12,46 @@
     {% if user != user_profile %}
       <form id="follow-form" method="post" action="{% url 'follow_toggle' user_profile.username %}">
         {% csrf_token %}
-        <button class="btn btn-outline-primary">{{ is_following|yesno:"Unfollow,Follow" }}</button>
+        <button class="btn btn-outline-primary">
+          {{ is_following|yesno:"Unfollow,Follow" }}
+        </button>
       </form>
     {% endif %}
   </div>
 </div>
+
 <hr>
+
 <h4>Posts</h4>
 <div class="row">
   {% for post in posts %}
-  <div class="col-md-4 mb-3">
-    <img src="{{ post.image.url }}" class="img-fluid">
-    <p>{{ post.caption }}</p>
-  </div>
+    <div class="col-md-4 mb-3">
+      <img src="{{ post.image.url }}" class="img-fluid">
+      <p>{{ post.caption }}</p>
+    </div>
   {% empty %}
-  <p>No posts yet.</p>
+    <p>No posts yet.</p>
   {% endfor %}
 </div>
 
 <script>
 document.getElementById("follow-form")?.addEventListener("submit", async function(e){
   e.preventDefault();
+
+  // Get CSRF token from the form
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
   const res = await fetch(this.action, {
     method: "POST",
-    headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    headers: {
+      "X-CSRFToken": csrfToken,
+    }
   });
+
   const data = await res.json();
-  alert("You have " + data.state);
+  // alert("You now " + data.state);
   location.reload();
 });
 </script>
+
 {% endblock %}
