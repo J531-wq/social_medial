@@ -4,11 +4,28 @@ from django.conf import settings
 
 # ---------------------- USER ----------------------
 class User(AbstractUser):
-    profile_image = models.ImageField(upload_to="profiles/", blank=True, null=True)
+    profile_image = models.ImageField(
+        upload_to="profiles/",
+        blank=True,
+        null=True,
+        default="profiles/default.png"  # safe default
+    )
     bio = models.TextField(blank=True)
 
     def __str__(self):
         return self.username
+
+    # Safe image accessor
+    @property
+    def profile_image_url(self):
+        """
+        Always returns a valid image URL.
+        Prevents ValueError: 'profile_image' has no file associated.
+        """
+        try:
+            return self.profile_image.url
+        except:
+            return "/media/profiles/default.png"
 
 
 # ---------------------- POSTS ----------------------
@@ -18,12 +35,19 @@ class Post(models.Model):
         related_name="posts",
         on_delete=models.CASCADE
     )
-    image = models.ImageField(upload_to="posts/")
+    image = models.ImageField(
+        upload_to="posts/",
+        blank=True,
+        null=True
+    )
     caption = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def total_likes(self):
         return self.likes.count()
+
+    def total_comments(self):
+        return self.comments.count()
 
     def __str__(self):
         return f"{self.author.username}'s Post"
@@ -34,8 +58,8 @@ class Like(models.Model):
     post = models.ForeignKey(Post, related_name="likes", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.user.username} liked {self.post.id}"
+    class Meta:
+        unique_together = ("user", "post")  # prevent duplicate likes
 
 
 class Comment(models.Model):
@@ -45,10 +69,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"{self.user.username} commented on {self.post.id}"
+        ordering = ["-created_at"]  # newest first
 
 
 class Follow(models.Model):
@@ -66,9 +87,6 @@ class Follow(models.Model):
 
     class Meta:
         unique_together = ("follower", "following")
-
-    def __str__(self):
-        return f"{self.follower} → {self.following}"
 
 
 # ---------------------- MESSAGES ----------------------
@@ -89,7 +107,6 @@ class Message(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
 
-    # Deletion flags
     deleted_for_sender = models.BooleanField(default=False)
     deleted_for_receiver = models.BooleanField(default=False)
     deleted_for_everyone = models.BooleanField(default=False)

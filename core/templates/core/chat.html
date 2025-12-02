@@ -1,15 +1,15 @@
 {% extends 'core/base.html' %}
 {% load static %}
+
+{% block title %}Chat with {{ other_user.username }}{% endblock %}
+
 {% block content %}
 
-<div class="chat-container" style="max-width:600px; margin:auto;">
-
+<div class="chat-container" style="max-width:600px; margin:auto; position:relative;">
   <h3>Chat with {{ other_user.username }}</h3>
 
   <!-- Messages -->
-  <div id="messages" 
-       style="height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:10px; padding:10px; margin-bottom:10px;">
-
+  <div id="messages" style="height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:10px; padding:10px; margin-bottom:10px; position:relative;">
     {% for msg in messages %}
       <div class="message" id="msg-{{ msg.id }}" style="margin-bottom:8px;">
         <strong>{{ msg.sender.username }}:</strong>
@@ -17,11 +17,9 @@
         {% if msg.content %}
           <div>{{ msg.content }}</div>
         {% endif %}
-
         {% if msg.image %}
           <div><img src="{{ msg.image.url }}" style="max-width:90%; border-radius:6px;"></div>
         {% endif %}
-
         {% if msg.audio %}
           <div>
             <audio controls preload="none" style="width:90%;">
@@ -30,29 +28,28 @@
           </div>
         {% endif %}
 
+        <!-- DELETE BUTTONS -->
         <div>
           {% if msg.sender == request.user %}
-            <button class="delete-btn btn btn-sm btn-outline-danger"
-                    data-id="{{ msg.id }}" 
-                    data-action="delete_for_me">
-              Delete for me
-            </button>
-            <button class="delete-btn btn btn-sm btn-outline-warning"
-                    data-id="{{ msg.id }}" 
-                    data-action="delete_for_everyone">
-              Delete for everyone
-            </button>
+            <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
+            <button class="delete-btn btn btn-sm btn-outline-warning" data-id="{{ msg.id }}" data-action="delete_for_everyone">Delete for everyone</button>
           {% else %}
-            <button class="delete-btn btn btn-sm btn-outline-danger"
-                    data-id="{{ msg.id }}" 
-                    data-action="delete_for_me">
-              Delete for me
-            </button>
+            <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
           {% endif %}
         </div>
-
       </div>
     {% endfor %}
+
+    <!-- Clickable tiny ad -->
+    <div class="message ad-message" id="chat-ad" style="margin-bottom:8px; text-align:center; font-size:10px; color:#888; cursor:pointer;">
+      Click-to-view ad
+    </div>
+
+    <!-- Ad placeholder -->
+    <div id="ad-placeholder" style="display:none; border:1px solid #ccc; border-radius:6px; padding:10px; margin:5px 0; text-align:center; color:#555; font-size:12px;">
+      Double-click to close
+    </div>
+
   </div>
 
   <!-- Input controls -->
@@ -70,7 +67,6 @@
   <div id="record-status" style="display:none; margin-top:8px; text-align:center;">
     <span id="timer">0:00</span> • Recording... (<a href="#" id="cancel-record">Cancel</a>)
   </div>
-
 </div>
 
 <script>
@@ -78,36 +74,49 @@
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+        document.cookie.split(';').forEach(cookie => {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
             }
-        }
+        });
     }
     return cookieValue;
 }
 
+/* -------------------- VARIABLES -------------------- */
 const messagesBox = document.getElementById("messages");
 const msgInput     = document.getElementById("msg");
 const sendBtn      = document.getElementById("send");
-const fileInput    = document.getElementById("fileInput");
+const micBtn       = document.getElementById("mic");
+const recordStatus = document.getElementById("record-status");
+const timerEl      = document.getElementById("timer");
+const cancelRecord = document.getElementById("cancel-record");
 const currentUser  = "{{ request.user.username }}";
 
-/* Scroll to bottom on load */
-messagesBox.scrollTop = messagesBox.scrollHeight;
+const chatAd = document.getElementById("chat-ad");
+const adPlaceholder = document.getElementById("ad-placeholder");
+
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingInterval = null;
+let seconds = 0;
 
 /* -------------------- APPEND MESSAGE -------------------- */
 function appendMessage(data) {
-    let html = `<div class="message" id="msg-${data.message_id}" style="margin-bottom:8px;">
-                    <strong>${data.sender}:</strong>`;
+    if (document.getElementById(`msg-${data.message_id}`)) return;
 
+    const div = document.createElement("div");
+    div.classList.add("message");
+    div.id = `msg-${data.message_id}`;
+    div.style.marginBottom = "8px";
+
+    let html = `<strong>${data.sender}:</strong>`;
     if (data.content) html += `<div>${data.content}</div>`;
     if (data.image)   html += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
     if (data.audio)   html += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
 
+    // DELETE BUTTONS FOR ALL MESSAGES
     html += `<div>`;
     if (data.sender === currentUser) {
         html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>
@@ -115,172 +124,144 @@ function appendMessage(data) {
     } else {
         html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>`;
     }
-    html += `</div></div>`;
+    html += `</div>`;
 
-    messagesBox.innerHTML += html;
+    div.innerHTML = html;
+
+    // Insert above the ad placeholder
+    messagesBox.insertBefore(div, chatAd);
     messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
-/* -------------------- SEND TEXT / AUDIO MESSAGE -------------------- */
-let mediaRecorder;
-let audioChunks = [];
-let seconds = 0;
-let interval;
-let isRecording = false;
+/* -------------------- DELETE BUTTONS (EVENT DELEGATION) -------------------- */
+messagesBox.addEventListener("click", async (e) => {
+    if (!e.target.classList.contains("delete-btn")) return;
 
+    const id = e.target.dataset.id;
+    const action = e.target.dataset.action;
+    const csrftoken = getCookie("csrftoken");
+
+    try {
+        const res = await fetch(`/delete-message/${id}/${action}/`, {
+            method: "POST",
+            headers: { "X-CSRFToken": csrftoken }
+        });
+        if (res.ok) {
+            const msgDiv = document.getElementById(`msg-${id}`);
+            msgDiv?.remove();
+        }
+    } catch (err) { console.error(err); }
+});
+
+/* -------------------- CLICKABLE AD -------------------- */
+chatAd.addEventListener("click", () => {
+    adPlaceholder.style.display = "block";
+    adPlaceholder.textContent = "Double-click to close";
+});
+
+adPlaceholder.addEventListener("dblclick", () => {
+    adPlaceholder.style.display = "none";
+});
+
+/* -------------------- SEND TEXT MESSAGE -------------------- */
 sendBtn.addEventListener("click", async () => {
     const content = msgInput.value.trim();
-
-    if (audioChunks.length > 0) {
-        // Send recorded audio
-        await stopRecording(true);
-        return;
-    }
-
     if (!content) return;
 
-    const formData = new FormData();
-    formData.append("content", content);
-
-    fetch("{% url 'send_message' username=other_user.username %}", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
+    const csrftoken = getCookie("csrftoken");
+    try {
+        const res = await fetch("{% url 'send_message' other_user.username %}", {
+            method: "POST",
+            headers: { "X-CSRFToken": csrftoken, "Content-Type": "application/json" },
+            body: JSON.stringify({ content: content })
+        });
+        const data = await res.json();
         appendMessage(data);
         msgInput.value = "";
-    });
-});
-
-/* -------------------- SEND FILE (IMAGE/AUDIO) -------------------- */
-fileInput.addEventListener("change", () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    if (file.type.startsWith("image/")) formData.append("image", file);
-    if (file.type.startsWith("audio/")) formData.append("audio", file);
-
-    fetch("{% url 'send_message' username=other_user.username %}", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => appendMessage(data));
-});
-
-/* -------------------- DELETE MESSAGE -------------------- */
-document.addEventListener("click", function (e) {
-    if (e.target.classList.contains("delete-btn")) {
-        const msgId  = e.target.dataset.id;
-        const action = e.target.dataset.action;
-
-        fetch(`/delete-message/${msgId}/${action}/`, {
-            method: "POST",
-            headers: { "X-CSRFToken": getCookie("csrftoken") },
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === "deleted_for_me") {
-                document.getElementById(`msg-${msgId}`).remove();
-            }
-            if (data.status === "deleted_for_everyone") {
-                document.getElementById(`msg-${msgId}`).innerHTML = "<em>Message deleted</em>";
-            }
-        });
-    }
+    } catch (err) { console.error(err); }
 });
 
 /* -------------------- VOICE RECORDING -------------------- */
-const micBtn = document.getElementById("mic");
-const recordStatus = document.getElementById("record-status");
-const timerSpan    = document.getElementById("timer");
-const cancelBtn    = document.getElementById("cancel-record");
-
-function formatTime(sec) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2,'0')}`;
-}
-
 micBtn.addEventListener("click", async () => {
-    if (isRecording) {
-        await stopRecording(true);
-        return;
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            seconds = 0;
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = sendAudioMessage;
+
+            mediaRecorder.start();
+            recordStatus.style.display = "block";
+            timerEl.textContent = "0:00";
+
+            recordingInterval = setInterval(() => {
+                seconds++;
+                const min = Math.floor(seconds / 60);
+                const sec = seconds % 60;
+                timerEl.textContent = `${min}:${sec.toString().padStart(2,'0')}`;
+            }, 1000);
+
+        } catch (err) {
+            alert("Microphone access denied.");
+            console.error(err);
+        }
+    } else if (mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        clearInterval(recordingInterval);
+        recordStatus.style.display = "none";
     }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Your browser does not support audio recording.");
-        return;
-    }
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-
-    mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) audioChunks.push(e.data);
-    };
-
-    mediaRecorder.start();
-    isRecording = true;
-    recordStatus.style.display = "block";
-    seconds = 0;
-    timerSpan.textContent = formatTime(seconds);
-
-    interval = setInterval(() => {
-        seconds++;
-        timerSpan.textContent = formatTime(seconds);
-    }, 1000);
 });
 
-// Cancel button discards audio
-cancelBtn.addEventListener("click", (e) => {
+cancelRecord.addEventListener("click", (e) => {
     e.preventDefault();
-    stopRecording(false); // false = discard recording
+    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+    audioChunks = [];
+    clearInterval(recordingInterval);
+    recordStatus.style.display = "none";
 });
 
-async function stopRecording(sendAudio) {
-    if (!isRecording) return;
-    isRecording = false;
-
-    clearInterval(interval);
-    recordStatus.style.display = "none";
-    timerSpan.textContent = formatTime(0);
-
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        await new Promise(resolve => {
-            mediaRecorder.onstop = resolve;
-            mediaRecorder.stop();
-        });
-    }
-
-    if (!sendAudio) {
-        audioChunks = [];
-        return;
-    }
-
-    if (audioChunks.length === 0) return;
-
-    const blob = new Blob(audioChunks, { type: "audio/mpeg" });
-    const file = new File([blob], `voice_${Date.now()}.mp3`, { type: "audio/mpeg" });
-
+async function sendAudioMessage() {
+    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
     const formData = new FormData();
-    formData.append("audio", file);
+    formData.append('audio', audioBlob);
 
-    const res = await fetch("{% url 'send_message' username=other_user.username %}", {
-        method: "POST",
-        headers: { "X-CSRFToken": getCookie("csrftoken") },
-        body: formData
-    });
-    const data = await res.json();
-    appendMessage(data);
+    const csrftoken = getCookie("csrftoken");
+
+    try {
+        const res = await fetch("{% url 'send_message' other_user.username %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        });
+        const data = await res.json();
+        appendMessage(data);
+    } catch (err) {
+        console.error(err);
+    }
 
     audioChunks = [];
 }
+
+/* -------------------- LIVE CHAT POLLING -------------------- */
+function fetchNewMessages() {
+    const lastId = getLastMessageId();
+    fetch("{% url 'chat_room' other_user.username %}?last_id=" + lastId)
+        .then(res => res.json())
+        .then(data => {
+            if (data.messages) data.messages.forEach(msg => appendMessage(msg));
+        })
+        .catch(err => console.error(err));
+}
+
+function getLastMessageId() {
+    const msgs = messagesBox.querySelectorAll(".message");
+    return msgs.length ? msgs[msgs.length - 1].id.split("-")[1] : 0;
+}
+
+setInterval(fetchNewMessages, 2000);
 </script>
 
 {% endblock %}

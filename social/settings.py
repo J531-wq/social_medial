@@ -62,7 +62,7 @@ ROOT_URLCONF = "social.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [],  # You can add BASE_DIR / "templates" if needed
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -79,12 +79,12 @@ WSGI_APPLICATION = "social.wsgi.application"
 ASGI_APPLICATION = "social.asgi.application"
 
 # -------------------
-# DATABASE (SQLite fresh)
+# DATABASE (SQLite)
 # -------------------
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",  # database file at project root
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -123,12 +123,10 @@ USE_TZ = True
 # -------------------
 # STATIC FILES
 # -------------------
-STATIC_URL = 'static/'
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-
 
 # -------------------
 # MEDIA FILES
@@ -146,3 +144,15 @@ LOGOUT_REDIRECT_URL = "login"
 # DEFAULT AUTO FIELD
 # -------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# -------------------
+# MESSAGES FRAMEWORK (optional but recommended for create_post)
+# -------------------
+from django.contrib.messages import constants as messages
+MESSAGE_TAGS = {
+    messages.DEBUG: 'debug',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'danger',
+}

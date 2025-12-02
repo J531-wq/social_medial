@@ -1,9 +1,72 @@
 {% extends 'core/base.html' %}
+{% load static %}
+
 {% block content %}
-<h3>New Post</h3>
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button class="btn btn-success">Upload</button>
-</form>
+<div class="container mt-4">
+    <h3>Create a New Post</h3>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="alert alert-{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="postForm">
+        {% csrf_token %}
+
+        <!-- Image upload -->
+        <div class="form-group">
+            <label for="id_image" class="btn btn-primary">
+                Choose Image
+            </label>
+            {{ form.image }}
+            <small class="form-text text-muted">Optional: Upload an image for your post.</small>
+        </div>
+
+        <!-- Image preview -->
+        <div class="form-group">
+            <img id="imagePreview" src="#" alt="Image Preview" style="display:none; max-width: 300px; margin-top:10px;"/>
+        </div>
+
+        <!-- Caption input -->
+        <div class="form-group">
+            {{ form.caption.label_tag }}
+            {{ form.caption }}
+        </div>
+
+        <button type="submit" class="btn btn-success mt-2">Upload Post</button>
+    </form>
+</div>
+
+<script>
+    const imageInput = document.getElementById("id_image");
+    const preview = document.getElementById("imagePreview");
+
+    // Hide default file input
+    imageInput.style.display = "none";
+
+    // Show live preview when image selected
+    imageInput.addEventListener("change", function(){
+        const file = this.files[0];
+        if(file){
+            const reader = new FileReader();
+            reader.onload = function(e){
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            }
+            reader.readAsDataURL(file);
+        } else {
+            preview.src = "#";
+            preview.style.display = "none";
+        }
+    });
+
+    // Clicking the label triggers file input
+    document.querySelector('label[for="id_image"]').addEventListener("click", function(){
+        imageInput.click();
+    });
+</script>
+
 {% endblock %}
