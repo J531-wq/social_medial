@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 
 from .models import Post, Comment, Message, Follow, Like
-from .forms import PostForm
+from .forms import PostForm, SignUpForm # FIXED: Import SignUpForm
 
 User = get_user_model()
 
@@ -26,9 +26,25 @@ def search(request):
     posts = Post.objects.filter(caption__icontains=query).order_by('-created_at')
     return render(request, 'core/search.html', {'query': query, 'users': users, 'posts': posts})
 
-# -------------------- SIGNUP --------------------
+# -------------------- SIGNUP (FINAL FIX) --------------------
 def signup(request):
-    return render(request, 'core/signup.html', {})
+    if request.method == 'POST':
+        form = SignUpForm(request.POST, request.FILES)
+        if form.is_valid():
+            # FIX: The UserCreationForm automatically handles saving the user 
+            # and hashing the two password fields into the final password.
+            # Calling form.save() directly is the standard and safest way.
+            user = form.save() 
+            
+            messages.success(request, f"Account created for {user.username}! You can now log in.")
+            return redirect('login') 
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = SignUpForm()
+        
+    # Pass the form object to the template
+    return render(request, 'core/signup.html', {'form': form}) 
 
 # -------------------- CREATE POST --------------------
 @login_required

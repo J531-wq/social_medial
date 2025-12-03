@@ -2,13 +2,21 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 
-# ---------------------- USER ----------------------
+# ---------------------- USER (FIXED) ----------------------
 class User(AbstractUser):
+    # ADDED: Field to store the user's phone number
+    phone_number = models.CharField(
+        max_length=15, 
+        blank=True, 
+        null=True,
+        unique=True # Optional: ensures that no two users have the same phone number
+    )
+    
     profile_image = models.ImageField(
         upload_to="profiles/",
         blank=True,
         null=True,
-        default="profiles/default.png"  # safe default
+        default="profiles/default.png" # safe default
     )
     bio = models.TextField(blank=True)
 

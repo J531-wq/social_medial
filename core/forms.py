@@ -4,11 +4,16 @@ from .models import User, Post, Message
 
 # ---------------------- SIGNUP FORM ----------------------
 class SignUpForm(UserCreationForm):
+    # The email field is already defined as a standard EmailField here
     email = forms.EmailField(required=True)
+    
+    # ADDED: Custom field for phone number
+    phone_number = forms.CharField(max_length=15, required=False, help_text="Optional") 
 
     class Meta:
         model = User
-        fields = ("username", "email", "password1", "password2", "profile_image", "bio")
+        # UPDATED: Added 'phone_number' to the fields tuple
+        fields = ("username", "email", "phone_number", "password1", "password2", "profile_image", "bio")
 
 
 # ---------------------- POST FORM ----------------------
