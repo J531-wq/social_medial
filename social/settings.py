@@ -26,8 +26,15 @@ ALLOWED_HOSTS = os.environ.get(
     "ALLOWED_HOSTS", ".onrender.com,localhost,127.0.0.1"
 ).split(",")
 
-CSRF_TRUSTED_ORIGINS = ['https://jmedial-mdp6.onrender.com']
+CSRF_TRUSTED_ORIGINS = [
+    'https://jmedial-mdp6.onrender.com', # Added just in case
+    'https://*.onrender.com',            # **BEST PRACTICE:** Wildcard for all Render subdomains
+]
 # You can add other trusted domains here too
+
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 
 # -------------------
 # APPLICATIONS
