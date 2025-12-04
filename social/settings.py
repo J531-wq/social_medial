@@ -26,6 +26,9 @@ ALLOWED_HOSTS = os.environ.get(
     "ALLOWED_HOSTS", ".onrender.com,localhost,127.0.0.1"
 ).split(",")
 
+CSRF_TRUSTED_ORIGINS = ['https://jmedial-mdp6.onrender.com']
+# You can add other trusted domains here too
+
 # -------------------
 # APPLICATIONS
 # -------------------
