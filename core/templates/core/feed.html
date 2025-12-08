@@ -5,20 +5,19 @@
 
 {% block content %}
 
-<!-- USERS HORIZONTAL LIST -->
-<div style="display: flex; overflow-x: auto; padding: 10px; gap: 15px; border-bottom: 1px solid #eee;">
+<div class="horizontal-users-list">
     {% for u in all_users %}
-        <div style="text-align: center;">
-            <a href="{% url 'profile' u.username %}" style="text-decoration: none; color: inherit;">
+        <div class="user-item">
+            <a href="{% url 'profile' u.username %}" class="user-link">
                 {% if u.profile_image %}
-                    <img src="{{ u.profile_image.url }}" alt="{{ u.username }}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
+                    <img src="{{ u.profile_image.url }}" alt="{{ u.username }}" class="user-profile-img">
                 {% else %}
-                    <img src="{% static 'default_profile.png' %}" alt="default profile" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
+                    <img src="{% static 'default_profile.png' %}" alt="default profile" class="user-profile-img">
                 {% endif %}
             </a>
-            <div style="font-size: 12px; margin-top:5px;">{{ u.username }}</div>
+            <div class="username-label">{{ u.username }}</div>
             {% if u != request.user %}
-                <a href="{% url 'chat_room' u.username %}" class="btn btn-sm btn-outline-primary mt-1" style="display:block; font-size:10px;">
+                <a href="{% url 'chat_room' u.username %}" class="btn btn-sm btn-outline-primary mt-1 d-block message-btn">
                     Message
                 </a>
             {% endif %}
@@ -34,17 +33,15 @@
         <h5>{{ post.author.username }}</h5>
 
         {% if post.image %}
-            <img src="{{ post.image.url }}" class="img-fluid rounded mb-2">
+            <img src="{{ post.image.url }}" class="img-fluid rounded mb-2" alt="Post Image">
         {% endif %}
 
         <p>{{ post.caption }}</p>
 
-        <!-- Like Button (AJAX) -->
         <button class="btn btn-outline-primary like-btn" data-post-id="{{ post.id }}">
             ❤️ <span class="like-count">{{ post.total_likes }}</span> Like{{ post.total_likes|pluralize }}
         </button>
 
-        <!-- Comments Section -->
         <div class="mt-3">
             <h6>Comments</h6>
             <ul class="list-group list-group-flush mb-2 comments-list">
@@ -65,38 +62,95 @@
     </div>
 </div>
 
-<!-- Tiny Auto-view Ad -->
 <div class="auto-view-ad" data-post-id="{{ post.id }}">
-    <p style="font-size:10px; margin:0; text-align:center;">Sponsored</p>
+    <p class="ad-label">Sponsored</p>
 </div>
 
 {% empty %}
 <p>No posts yet.</p>
 {% endfor %}
 
-<!-- Fixed click-to-view ad -->
 <div id="fixedClickAd" title="Click to view ad">
-    <p style="font-size: 10px; margin: 0; text-align:center;">Ad</p>
+    <p class="ad-label">Ad</p>
 </div>
 
+---
+
+## 🎨 Cleaned-up and Responsive Styles
+
+```html
 <style>
+/* -------------------- USERS HORIZONTAL LIST -------------------- */
+.horizontal-users-list {
+    display: flex; 
+    overflow-x: auto; 
+    padding: 10px; 
+    gap: 15px; 
+    border-bottom: 1px solid #eee;
+    /* Hide scrollbar on some browsers for cleaner look */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+.horizontal-users-list::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+.user-item {
+    text-align: center;
+    flex-shrink: 0; /* Prevents items from squishing */
+}
+.user-profile-img {
+    width:60px; 
+    height:60px; 
+    border-radius:50%; 
+    object-fit:cover;
+    border: 2px solid #ff007f; /* Optional: Instagram-style border */
+}
+.username-label {
+    font-size: 12px; 
+    margin-top:5px;
+}
+.message-btn {
+    font-size:10px;
+}
+
+
+/* -------------------- ADS STYLES -------------------- */
 .auto-view-ad {
     width: 60px; height:60px;
     background:#eee; border:1px solid #ccc; border-radius:6px;
     text-align:center; line-height:60px; font-size:10px;
     margin:10px auto; cursor:pointer;
 }
+
 #fixedClickAd {
     position:fixed; top:70px; right:10px;
     width:60px; height:60px;
     background:#ddd; border:1px solid #ccc; border-radius:6px;
-    text-align:center; line-height:60px; font-size:10px; z-index:1050; cursor:pointer;
+    text-align:center; line-height:60px; font-size:10px; 
+    z-index:1050; cursor:pointer;
+    transition: all 0.3s ease-in-out;
 }
 #fixedClickAd.expanded {
     width:200px; height:250px; line-height:normal; padding:10px;
 }
+.ad-label {
+    font-size: 10px; margin: 0; text-align: center;
+    line-height: inherit;
+}
+
+/* 🎯 MEDIA QUERY: Hide Fixed Ad on Mobile (Small Screens) */
+@media (max-width: 767px) {
+    #fixedClickAd {
+        display: none !important; /* Forces removal on smaller screens */
+    }
+}
 </style>
 
+---
+
+## 💻 Original JavaScript (Restored)
+
+```html
 <script>
 function getCookie(name){
     let cookieValue=null;
@@ -181,7 +235,7 @@ window.addEventListener('load', trackImpressions);
 const clickAd=document.getElementById('fixedClickAd');
 clickAd.addEventListener('click', ()=>{
     clickAd.classList.toggle('expanded');
-    clickAd.innerHTML = clickAd.classList.contains('expanded') ? "<h4 style='text-align:center;'>Full Ad Content Here</h4>" : "<p style='font-size:10px;margin:0;text-align:center;'>Ad</p>";
+    clickAd.innerHTML = clickAd.classList.contains('expanded') ? "<h4 style='text-align:center;'>Full Ad Content Here</h4>" : "<p class='ad-label'>Ad</p>";
 });
 </script>
 

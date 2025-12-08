@@ -2,15 +2,15 @@
 
 {% block content %}
 
-<div class="d-flex align-items-center">
+<div class="d-flex flex-column flex-md-row align-items-center profile-header">
     
-    <img src="{{ user_profile.profile_image_url }}" width="80" height="80" class="rounded-circle me-3">
-
-    <div>
+    <img src="{{ user_profile.profile_image_url }}" 
+         alt="{{ user_profile.username }}'s Profile Picture"
+         class="profile-img me-3 mb-3 mb-md-0"> <div class="profile-info text-center text-md-start">
         <h3>{{ user_profile.username }}</h3>
         <p>{{ user_profile.bio }}</p>
 
-        <p>
+        <p class="mb-2">
             <span id="followers">{{ followers_count }}</span> followers •
             <span id="following">{{ following_count }}</span> following
         </p>
@@ -28,16 +28,53 @@
 <hr>
 
 <h4>Posts</h4>
-<div class="row">
+<div class="row post-grid">
     {% for post in posts %}
-        <div class="col-md-4 mb-3">
-            <img src="{{ post.image.url }}" class="img-fluid">
-            <p>{{ post.caption }}</p>
-        </div>
+        <div class="col-6 col-md-4 mb-3 post-item"> 
+            <img src="{{ post.image.url }}" 
+                 alt="{{ post.caption|truncatechars:50 }}" 
+                 class="img-fluid profile-post-img"> </div>
     {% empty %}
-        <p>No posts yet.</p>
+        <p class="text-center">No posts yet.</p>
     {% endfor %}
 </div>
+
+<style>
+/* -------------------- PROFILE HEADER STYLING -------------------- */
+.profile-header {
+    /* Center items on mobile when stacking */
+    justify-content: center;
+}
+.profile-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%; /* Ensures the image remains circular */
+    object-fit: cover;
+}
+/* Adjust image size for larger screens */
+@media (min-width: 768px) {
+    .profile-img {
+        width: 120px;
+        height: 120px;
+        /* Optional: increase font size for better visual weight on desktop */
+    }
+}
+
+/* -------------------- POST GRID STYLING -------------------- */
+/* Ensure the image fills the entire post grid item without extra space */
+.profile-post-img {
+    width: 100%;
+    height: 100%; /* Ensures images in a row are the same height */
+    aspect-ratio: 1 / 1; /* Forces the image to be a perfect square, common for Instagram-style grids */
+    object-fit: cover;
+    display: block;
+}
+
+/* Optional: Clean up the post item padding/margin for a tighter grid */
+.post-item {
+    padding: 2px; /* Reduce padding between grid items */
+}
+</style>
 
 <script>
 // -------------------- CSRF UTILITY --------------------
@@ -56,32 +93,39 @@ function getCookie(name) {
 
 // -------------------- FOLLOW BUTTON --------------------
 const followBtn = document.getElementById("follow-btn");
-followBtn?.addEventListener("click", async function () {
-    const username = this.dataset.username;
-    const csrftoken = getCookie('csrftoken');
+// Check if the element exists (i.e., we are viewing another user's profile)
+if (followBtn) { 
+    followBtn.addEventListener("click", async function () {
+        const username = this.dataset.username;
+        const csrftoken = getCookie('csrftoken');
 
-    try {
-        const res = await fetch(`/follow/${username}/`, {
-            method: "POST",
-            headers: { "X-CSRFToken": csrftoken }
-        });
+        try {
+            const res = await fetch(`/follow/${username}/`, {
+                method: "POST",
+                headers: { "X-CSRFToken": csrftoken }
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (data.state === "unfollow") {
-            this.textContent = "Unfollow";
-        } else {
-            this.textContent = "Follow";
+            if (data.state === "unfollow") {
+                this.textContent = "Unfollow";
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-secondary'); // Optional: change style to indicate following
+            } else {
+                this.textContent = "Follow";
+                this.classList.remove('btn-secondary');
+                this.classList.add('btn-outline-primary'); // Optional: change style
+            }
+
+            // Update follower/following counts
+            document.getElementById("followers").textContent = data.followers_count;
+            document.getElementById("following").textContent = data.following_count;
+
+        } catch (err) {
+            console.error("Follow/unfollow error:", err);
         }
-
-        // Update follower/following counts
-        document.getElementById("followers").textContent = data.followers_count;
-        document.getElementById("following").textContent = data.following_count;
-
-    } catch (err) {
-        console.error("Follow/unfollow error:", err);
-    }
-});
+    });
+}
 </script>
 
 {% endblock %}

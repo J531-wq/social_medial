@@ -5,14 +5,14 @@
   <meta charset="utf-8">
   <title>{% block title %}Social{% endblock %}</title>
 
-  <!-- Bootstrap -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
-   body {
+    body {
     background-color: whitesmoke;
     font-family: 'Poppins', sans-serif;
     color: #444;
@@ -20,100 +20,109 @@
     display: flex;
     flex-direction: column;
     padding-top: 85px; /* navbar space */
-   }
+    }
 
-   /* Navbar */
-   .navbar {
+    /* Navbar */
+    /* Changed navbar-expand-lg to navbar-expand-md in HTML for better tablet breakpoint */
+    .navbar {
     position: fixed;
     top: 0;
     width: 100%;
-    z-index: 1050; /* ensures all buttons clickable */
+    z-index: 1050; 
     background-color: #f4f3d9 !important;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     padding: 0.8rem 1rem;
-   }
+    }
 
-   .navbar.scrolled {
+    .navbar.scrolled {
     background-color: #f5f4dc !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-   }
+    }
 
-   #weblogo {
+    #weblogo {
     height: 55px;
     width: auto;
     border-radius: 6px;
     border: 2px solid purple;
     object-fit: cover;
-   }
+    }
 
-   .navbar .btn {
+    /* Ensured buttons have margin on desktop, but stack correctly on mobile */
+    .navbar .btn {
     border-radius: 20px;
     font-weight: 500;
-    margin-left: 0.4rem;
-   }
+    margin-left: 0.4rem; /* Desktop margin */
+    }
+    
+    /* Removed restrictive mobile CSS as Bootstrap's collapse handles layout */
+    .search-form {
+      /* Added a small margin for better spacing on desktop */
+      margin-right: 0.5rem; 
+    }
 
-   footer {
+    /* Mobile specific adjustment for better button stacking within the collapse */
+    @media (max-width: 767px) {
+      .navbar .btn {
+        width: 100%;
+        margin: 5px 0; /* Stack buttons with space */
+      }
+      .search-form {
+        width: 100%;
+        margin-bottom: 10px;
+        margin-right: 0;
+      }
+    }
+
+    footer {
     background: white;
     margin-top: auto;
     text-align: center;
     padding: 1rem 0;
     border-top: 1px solid #eee;
-   }
-
-   /* Mobile fixes */
-   @media (max-width:768px){
-    .navbar .container{
-      flex-direction: column;
-      align-items: flex-start;
     }
-    .navbar .btn{
-      width: 100%;
-      margin-top: 5px;
-    }
-    .search-form{
-      width: 100%;
-      margin-bottom: 10px;
-    }
-   }
   </style>
 </head>
 
 <body>
 
-  <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg" id="mainNavbar">
-    <div class="container d-flex justify-content-between align-items-center">
-
-      <!-- Logo -->
+  <nav class="navbar navbar-expand-md" id="mainNavbar">
+    <div class="container">
+      
       <a class="navbar-brand" href="{% url 'feed' %}">
-        <img id="weblogo" src="media/profiles/ChatGPT_Image_Sep_10_2025_03_52_01_PM.png" alt="">
+        <img id="weblogo" src="media/profiles/ChatGPT_Image_Sep_10_2025_03_52_01_PM.png" alt="Social App Logo">
       </a>
+      
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-      <div class="d-flex align-items-center">
-
-        <!-- Search -->
-        <form class="d-flex me-2 search-form" action="{% url 'search' %}" method="get">
-          <input class="form-control form-control-sm" name="q" type="search" placeholder="Search..." required>
-          <button class="btn btn-outline-success btn-sm ms-1" type="submit">🔍</button>
-        </form>
-
-        {% if user.is_authenticated %}
-          <a href="{% url 'feed' %}" class="btn btn-outline-primary">Home</a>
-          <a href="{% url 'create_post' %}" class="btn btn-outline-primary">Post</a>
-          <a href="{% url 'profile' user.username %}" class="btn btn-outline-primary">Profile</a>
-          <a href="{% url 'chat_room' user.username %}" class="btn btn-outline-primary">Chat</a>
-
-          <form action="{% url 'logout' %}" method="post" style="display:inline;">
-            {% csrf_token %}
-            <button class="btn btn-outline-secondary">Logout</button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        
+        <div class="d-flex flex-column flex-md-row align-items-md-center w-100 w-md-auto">
+          
+          <form class="d-flex search-form w-100 w-md-auto mb-2 mb-md-0" action="{% url 'search' %}" method="get">
+            <input class="form-control form-control-sm" name="q" type="search" placeholder="Search..." required>
+            <button class="btn btn-outline-success btn-sm ms-1" type="submit">🔍</button>
           </form>
 
-        {% else %}
-          <a href="{% url 'login' %}" class="btn btn-outline-primary">Login</a>
-          <a href="{% url 'signup' %}" class="btn btn-outline-primary">Sign Up</a>
-        {% endif %}
-      </div>
+          {% if user.is_authenticated %}
+            <a href="{% url 'feed' %}" class="btn btn-outline-primary">Home</a>
+            <a href="{% url 'create_post' %}" class="btn btn-outline-primary">Post</a>
+            <a href="{% url 'profile' user.username %}" class="btn btn-outline-primary">Profile</a>
+            <a href="{% url 'chat_room' user.username %}" class="btn btn-outline-primary">Chat</a>
+            
+            <form action="{% url 'logout' %}" method="post" class="d-inline">
+              {% csrf_token %}
+              <button class="btn btn-outline-secondary">Logout</button>
+            </form>
 
+          {% else %}
+            <a href="{% url 'login' %}" class="btn btn-outline-primary">Login</a>
+            <a href="{% url 'signup' %}" class="btn btn-outline-primary">Sign Up</a>
+          {% endif %}
+
+        </div>
+      </div>
     </div>
   </nav>
 
