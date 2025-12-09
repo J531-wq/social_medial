@@ -48,7 +48,7 @@
 
   </div>
 
-    <div id="chat-controls" style="display:flex; align-items:center; gap:6px; **background-color: white; z-index: 1000;**">
+        <div id="chat-controls" style="display:flex; align-items:center; gap:6px; background-color: white; z-index: 1000;">
     <label for="fileInput" style="cursor:pointer;">📎
       <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none;">
     </label>
@@ -191,7 +191,7 @@ micBtn.addEventListener("click", async () => {
             mediaRecorder.start();
             recordStatus.style.display = "block";
             timerEl.textContent = "0:00";
-             micBtn.textContent = "🛑"; // Change button text to stop icon
+            micBtn.textContent = "🛑"; // Change button text to stop icon
 
             recordingInterval = setInterval(() => {
                 seconds++;
@@ -263,7 +263,7 @@ setInterval(fetchNewMessages, 2000);
 
 /* Scroll to bottom on load */
 window.onload = function() {
-    messagesBox.scrollTop = messagesBox.scrollHeight;
+    messagesBox.scrollTop = messagesBox.scrollHeight;
 };
 </script>
 
