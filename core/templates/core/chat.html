@@ -6,93 +6,88 @@
 {% block content %}
 
 <div class="chat-container" style="max-width:600px; margin:auto; position:relative;">
-  <h3>Chat with {{ other_user.username }}</h3>
+  <h3>Chat with {{ other_user.username }}</h3>
 
-  <!-- Messages -->
-  <div id="messages" style="height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:10px; padding:10px; margin-bottom:10px; position:relative;">
-    {% for msg in messages %}
-      <div class="message" id="msg-{{ msg.id }}" style="margin-bottom:8px;">
-        <strong>{{ msg.sender.username }}:</strong>
+    <div id="messages" style="height:400px; overflow-y:auto; border:1px solid #ccc; border-radius:10px; padding:10px; margin-bottom:10px; position:relative;">
+    {% for msg in messages %}
+      <div class="message" id="msg-{{ msg.id }}" style="margin-bottom:8px;">
+        <strong>{{ msg.sender.username }}:</strong>
 
-        {% if msg.content %}
-          <div>{{ msg.content }}</div>
-        {% endif %}
-        {% if msg.image %}
-          <div><img src="{{ msg.image.url }}" style="max-width:90%; border-radius:6px;"></div>
-        {% endif %}
-        {% if msg.audio %}
-          <div>
-            <audio controls preload="none" style="width:90%;">
-              <source src="{{ msg.audio.url }}" type="audio/mpeg">
-            </audio>
-          </div>
-        {% endif %}
+        {% if msg.content %}
+          <div>{{ msg.content }}</div>
+        {% endif %}
+        {% if msg.image %}
+          <div><img src="{{ msg.image.url }}" style="max-width:90%; border-radius:6px;"></div>
+        {% endif %}
+        {% if msg.audio %}
+          <div>
+            <audio controls preload="none" style="width:90%;">
+              <source src="{{ msg.audio.url }}" type="audio/mpeg">
+            </audio>
+          </div>
+        {% endif %}
 
-        <!-- DELETE BUTTONS -->
-        <div>
-          {% if msg.sender == request.user %}
-            <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
-            <button class="delete-btn btn btn-sm btn-outline-warning" data-id="{{ msg.id }}" data-action="delete_for_everyone">Delete for everyone</button>
-          {% else %}
-            <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
-          {% endif %}
-        </div>
-      </div>
-    {% endfor %}
+                <div>
+          {% if msg.sender == request.user %}
+            <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
+            <button class="delete-btn btn btn-sm btn-outline-warning" data-id="{{ msg.id }}" data-action="delete_for_everyone">Delete for everyone</button>
+          {% else %}
+            <button class="delete-btn btn btn-sm btn-outline-danger" data-id="{{ msg.id }}" data-action="delete_for_me">Delete for me</button>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
 
-    <!-- Clickable tiny ad -->
-    <div class="message ad-message" id="chat-ad" style="margin-bottom:8px; text-align:center; font-size:10px; color:#888; cursor:pointer;">
-      Click-to-view ad
-    </div>
+        <div class="message ad-message" id="chat-ad" style="margin-bottom:8px; text-align:center; font-size:10px; color:#888; cursor:pointer;">
+      Click-to-view ad
+    </div>
 
-    <!-- Ad placeholder -->
-    <div id="ad-placeholder" style="display:none; border:1px solid #ccc; border-radius:6px; padding:10px; margin:5px 0; text-align:center; color:#555; font-size:12px;">
-      Double-click to close
-    </div>
+        <div id="ad-placeholder" style="display:none; border:1px solid #ccc; border-radius:6px; padding:10px; margin:5px 0; text-align:center; color:#555; font-size:12px;">
+      Double-click to close
+    </div>
 
-  </div>
+  </div>
 
-  <!-- Input controls -->
-  <div id="chat-controls" style="display:flex; align-items:center; gap:6px;">
-    <label for="fileInput" style="cursor:pointer;">📎
-      <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none;">
-    </label>
+    <div id="chat-controls" style="display:flex; align-items:center; gap:6px; **background-color: white; z-index: 1000;**">
+    <label for="fileInput" style="cursor:pointer;">📎
+      <input type="file" id="fileInput" accept="image/*,audio/*" style="display:none;">
+    </label>
 
-    <input id="msg" class="form-control" placeholder="Type a message..." style="flex:1;">
-    <button id="send" class="btn btn-primary">Send</button>
-    <button id="mic" class="btn btn-outline-secondary">🎤</button>
-  </div>
+    <input id="msg" class="form-control" placeholder="Type a message..." style="flex:1;">
+    <button id="send" class="btn btn-primary">Send</button>
+    <button id="mic" class="btn btn-outline-secondary">🎤</button>
+  </div>
 
-  <!-- Recording status -->
-  <div id="record-status" style="display:none; margin-top:8px; text-align:center;">
-    <span id="timer">0:00</span> • Recording... (<a href="#" id="cancel-record">Cancel</a>)
-  </div>
+    <div id="record-status" style="display:none; margin-top:8px; text-align:center;">
+    <span id="timer">0:00</span> • Recording... (<a href="#" id="cancel-record">Cancel</a>)
+    <button id="send-audio-btn" class="btn btn-success btn-sm ms-2" style="display:none;">Send Audio</button>
+  </div>
 </div>
 
 <script>
 /* -------------------- UTILITY -------------------- */
 function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        document.cookie.split(';').forEach(cookie => {
-            cookie = cookie.trim();
-            if (cookie.startsWith(name + '=')) {
-                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
-            }
-        });
-    }
-    return cookieValue;
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(cookie => {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+            }
+        });
+    }
+    return cookieValue;
 }
 
 /* -------------------- VARIABLES -------------------- */
 const messagesBox = document.getElementById("messages");
-const msgInput     = document.getElementById("msg");
-const sendBtn      = document.getElementById("send");
-const micBtn       = document.getElementById("mic");
+const msgInput     = document.getElementById("msg");
+const sendBtn      = document.getElementById("send");
+const micBtn       = document.getElementById("mic");
 const recordStatus = document.getElementById("record-status");
-const timerEl      = document.getElementById("timer");
+const timerEl      = document.getElementById("timer");
 const cancelRecord = document.getElementById("cancel-record");
-const currentUser  = "{{ request.user.username }}";
+const currentUser  = "{{ request.user.username }}";
 
 const chatAd = document.getElementById("chat-ad");
 const adPlaceholder = document.getElementById("ad-placeholder");
@@ -104,164 +99,172 @@ let seconds = 0;
 
 /* -------------------- APPEND MESSAGE -------------------- */
 function appendMessage(data) {
-    if (document.getElementById(`msg-${data.message_id}`)) return;
+    if (document.getElementById(`msg-${data.message_id}`)) return;
 
-    const div = document.createElement("div");
-    div.classList.add("message");
-    div.id = `msg-${data.message_id}`;
-    div.style.marginBottom = "8px";
+    const div = document.createElement("div");
+    div.classList.add("message");
+    div.id = `msg-${data.message_id}`;
+    div.style.marginBottom = "8px";
 
-    let html = `<strong>${data.sender}:</strong>`;
-    if (data.content) html += `<div>${data.content}</div>`;
-    if (data.image)   html += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
-    if (data.audio)   html += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
+    let html = `<strong>${data.sender}:</strong>`;
+    if (data.content) html += `<div>${data.content}</div>`;
+    if (data.image)   html += `<div><img src="${data.image}" style="max-width:90%; border-radius:6px;"></div>`;
+    if (data.audio)   html += `<div><audio controls src="${data.audio}" style="width:90%;"></audio></div>`;
 
-    // DELETE BUTTONS FOR ALL MESSAGES
-    html += `<div>`;
-    if (data.sender === currentUser) {
-        html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>
-                 <button class="delete-btn btn btn-sm btn-outline-warning" data-id="${data.message_id}" data-action="delete_for_everyone">Delete for everyone</button>`;
-    } else {
-        html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>`;
-    }
-    html += `</div>`;
+    // DELETE BUTTONS FOR ALL MESSAGES
+    html += `<div>`;
+    if (data.sender === currentUser) {
+        html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>
+                 <button class="delete-btn btn btn-sm btn-outline-warning" data-id="${data.message_id}" data-action="delete_for_everyone">Delete for everyone</button>`;
+    } else {
+        html += `<button class="delete-btn btn btn-sm btn-outline-danger" data-id="${data.message_id}" data-action="delete_for_me">Delete for me</button>`;
+    }
+    html += `</div>`;
 
-    div.innerHTML = html;
+    div.innerHTML = html;
 
-    // Insert above the ad placeholder
-    messagesBox.insertBefore(div, chatAd);
-    messagesBox.scrollTop = messagesBox.scrollHeight;
+    // Insert above the ad placeholder
+    messagesBox.insertBefore(div, chatAd);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
 }
 
 /* -------------------- DELETE BUTTONS (EVENT DELEGATION) -------------------- */
 messagesBox.addEventListener("click", async (e) => {
-    if (!e.target.classList.contains("delete-btn")) return;
+    if (!e.target.classList.contains("delete-btn")) return;
 
-    const id = e.target.dataset.id;
-    const action = e.target.dataset.action;
-    const csrftoken = getCookie("csrftoken");
+    const id = e.target.dataset.id;
+    const action = e.target.dataset.action;
+    const csrftoken = getCookie("csrftoken");
 
-    try {
-        const res = await fetch(`/delete-message/${id}/${action}/`, {
-            method: "POST",
-            headers: { "X-CSRFToken": csrftoken }
-        });
-        if (res.ok) {
-            const msgDiv = document.getElementById(`msg-${id}`);
-            msgDiv?.remove();
-        }
-    } catch (err) { console.error(err); }
+    try {
+        const res = await fetch(`/delete-message/${id}/${action}/`, {
+            method: "POST",
+            headers: { "X-CSRFToken": csrftoken }
+        });
+        if (res.ok) {
+            const msgDiv = document.getElementById(`msg-${id}`);
+            msgDiv?.remove();
+        }
+    } catch (err) { console.error(err); }
 });
 
 /* -------------------- CLICKABLE AD -------------------- */
 chatAd.addEventListener("click", () => {
-    adPlaceholder.style.display = "block";
-    adPlaceholder.textContent = "Double-click to close";
+    adPlaceholder.style.display = "block";
+    adPlaceholder.textContent = "Double-click to close";
 });
 
 adPlaceholder.addEventListener("dblclick", () => {
-    adPlaceholder.style.display = "none";
+    adPlaceholder.style.display = "none";
 });
 
 /* -------------------- SEND TEXT MESSAGE -------------------- */
 sendBtn.addEventListener("click", async () => {
-    const content = msgInput.value.trim();
-    if (!content) return;
+    const content = msgInput.value.trim();
+    if (!content) return;
 
-    const csrftoken = getCookie("csrftoken");
-    try {
-        const res = await fetch("{% url 'send_message' other_user.username %}", {
-            method: "POST",
-            headers: { "X-CSRFToken": csrftoken, "Content-Type": "application/json" },
-            body: JSON.stringify({ content: content })
-        });
-        const data = await res.json();
-        appendMessage(data);
-        msgInput.value = "";
-    } catch (err) { console.error(err); }
+    const csrftoken = getCookie("csrftoken");
+    try {
+        const res = await fetch("{% url 'send_message' other_user.username %}", {
+            method: "POST",
+            headers: { "X-CSRFToken": csrftoken, "Content-Type": "application/json" },
+            body: JSON.stringify({ content: content })
+        });
+        const data = await res.json();
+        appendMessage(data);
+        msgInput.value = "";
+    } catch (err) { console.error(err); }
 });
 
 /* -------------------- VOICE RECORDING -------------------- */
 micBtn.addEventListener("click", async () => {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            seconds = 0;
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            seconds = 0;
 
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = sendAudioMessage;
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = sendAudioMessage;
 
-            mediaRecorder.start();
-            recordStatus.style.display = "block";
-            timerEl.textContent = "0:00";
+            mediaRecorder.start();
+            recordStatus.style.display = "block";
+            timerEl.textContent = "0:00";
+             micBtn.textContent = "🛑"; // Change button text to stop icon
 
-            recordingInterval = setInterval(() => {
-                seconds++;
-                const min = Math.floor(seconds / 60);
-                const sec = seconds % 60;
-                timerEl.textContent = `${min}:${sec.toString().padStart(2,'0')}`;
-            }, 1000);
+            recordingInterval = setInterval(() => {
+                seconds++;
+                const min = Math.floor(seconds / 60);
+                const sec = seconds % 60;
+                timerEl.textContent = `${min}:${sec.toString().padStart(2,'0')}`;
+            }, 1000);
 
-        } catch (err) {
-            alert("Microphone access denied.");
-            console.error(err);
-        }
-    } else if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        clearInterval(recordingInterval);
-        recordStatus.style.display = "none";
-    }
+        } catch (err) {
+            alert("Microphone access denied. Ensure your site uses HTTPS.");
+            console.error(err);
+        }
+    } else if (mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        clearInterval(recordingInterval);
+        recordStatus.style.display = "none";
+        micBtn.textContent = "🎤"; // Reset button text
+    }
 });
 
 cancelRecord.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-    audioChunks = [];
-    clearInterval(recordingInterval);
-    recordStatus.style.display = "none";
+    e.preventDefault();
+    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+    audioChunks = [];
+    clearInterval(recordingInterval);
+    recordStatus.style.display = "none";
+    micBtn.textContent = "🎤"; // Reset button text
 });
 
 async function sendAudioMessage() {
-    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-    const formData = new FormData();
-    formData.append('audio', audioBlob);
+    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    const formData = new FormData();
+    formData.append('audio', audioBlob);
 
-    const csrftoken = getCookie("csrftoken");
+    const csrftoken = getCookie("csrftoken");
 
-    try {
-        const res = await fetch("{% url 'send_message' other_user.username %}", {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrftoken },
-            body: formData
-        });
-        const data = await res.json();
-        appendMessage(data);
-    } catch (err) {
-        console.error(err);
-    }
+    try {
+        const res = await fetch("{% url 'send_message' other_user.username %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        });
+        const data = await res.json();
+        appendMessage(data);
+    } catch (err) {
+        console.error(err);
+    }
 
-    audioChunks = [];
+    audioChunks = [];
 }
 
 /* -------------------- LIVE CHAT POLLING -------------------- */
 function fetchNewMessages() {
-    const lastId = getLastMessageId();
-    fetch("{% url 'chat_room' other_user.username %}?last_id=" + lastId)
-        .then(res => res.json())
-        .then(data => {
-            if (data.messages) data.messages.forEach(msg => appendMessage(msg));
-        })
-        .catch(err => console.error(err));
+    const lastId = getLastMessageId();
+    fetch("{% url 'chat_room' other_user.username %}?last_id=" + lastId)
+        .then(res => res.json())
+        .then(data => {
+            if (data.messages) data.messages.forEach(msg => appendMessage(msg));
+        })
+        .catch(err => console.error(err));
 }
 
 function getLastMessageId() {
-    const msgs = messagesBox.querySelectorAll(".message");
-    return msgs.length ? msgs[msgs.length - 1].id.split("-")[1] : 0;
+    const msgs = messagesBox.querySelectorAll(".message");
+    return msgs.length ? msgs[msgs.length - 1].id.split("-")[1] : 0;
 }
 
 setInterval(fetchNewMessages, 2000);
+
+/* Scroll to bottom on load */
+window.onload = function() {
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+};
 </script>
 
 {% endblock %}
