@@ -11,6 +11,9 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- ✅ ADDED FONT AWESOME (REQUIRED FOR LIKE BUTTON ICONS) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
   <style>
     body {
     background-color: whitesmoke;
@@ -22,8 +25,6 @@
     padding-top: 85px; /* navbar space */
     }
 
-    /* Navbar */
-    /* Changed navbar-expand-lg to navbar-expand-md in HTML for better tablet breakpoint */
     .navbar {
     position: fixed;
     top: 0;
@@ -47,24 +48,20 @@
     object-fit: cover;
     }
 
-    /* Ensured buttons have margin on desktop, but stack correctly on mobile */
     .navbar .btn {
     border-radius: 20px;
     font-weight: 500;
-    margin-left: 0.4rem; /* Desktop margin */
-    }
-    
-    /* Removed restrictive mobile CSS as Bootstrap's collapse handles layout */
-    .search-form {
-      /* Added a small margin for better spacing on desktop */
-      margin-right: 0.5rem; 
+    margin-left: 0.4rem;
     }
 
-    /* Mobile specific adjustment for better button stacking within the collapse */
+    .search-form {
+      margin-right: 0.5rem;
+    }
+
     @media (max-width: 767px) {
       .navbar .btn {
         width: 100%;
-        margin: 5px 0; /* Stack buttons with space */
+        margin: 5px 0;
       }
       .search-form {
         width: 100%;
@@ -136,7 +133,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Navbar scroll effect
     const navbar = document.getElementById('mainNavbar');
     window.addEventListener('scroll', () => {
       navbar.classList.toggle('scrolled', window.scrollY > 10);

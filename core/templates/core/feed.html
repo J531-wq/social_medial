@@ -16,6 +16,7 @@
                 {% endif %}
             </a>
             <div class="username-label">{{ u.username }}</div>
+
             {% if u != request.user %}
                 <a href="{% url 'chat_room' u.username %}" class="btn btn-sm btn-outline-primary mt-1 d-block message-btn">
                     Message
@@ -25,7 +26,7 @@
     {% endfor %}
 </div>
 
-<h3>Your Feed</h3>
+<h3 class="mt-4">Your Feed</h3>
 
 {% for post in posts %}
 <div class="card my-3" data-post-id="{{ post.id }}">
@@ -38,10 +39,21 @@
 
         <p>{{ post.caption }}</p>
 
-        <button class="btn btn-outline-primary like-btn" data-post-id="{{ post.id }}">
-            ❤️ <span class="like-count">{{ post.total_likes }}</span> Like{{ post.total_likes|pluralize }}
-        </button>
+        <!-- LIKE BUTTON -->
+        {% if post.is_liked %}
+            <button class="like-btn post-action-btn" data-post-id="{{ post.id }}">
+                <i class="fa-solid fa-heart" style="color: red; font-size: 1.2rem;"></i>
+            </button>
+        {% else %}
+            <button class="like-btn post-action-btn" data-post-id="{{ post.id }}">
+                <i class="fa-regular fa-heart" style="color: gray; font-size: 1.2rem;"></i>
+            </button>
+        {% endif %}
 
+        <span class="like-count" id="like-count-{{ post.id }}">{{ post.total_likes_count }}</span>
+        Like{{ post.total_likes_count|pluralize }}
+
+        <!-- COMMENTS -->
         <div class="mt-3">
             <h6>Comments</h6>
             <ul class="list-group list-group-flush mb-2 comments-list">
@@ -74,87 +86,59 @@
     <p class="ad-label">Ad</p>
 </div>
 
----
-
-## 🎨 Cleaned-up and Responsive Styles
-
-```html
+<!-- -------------------- STYLES -------------------- -->
 <style>
-/* -------------------- USERS HORIZONTAL LIST -------------------- */
 .horizontal-users-list {
-    display: flex; 
-    overflow-x: auto; 
-    padding: 10px; 
-    gap: 15px; 
+    display: flex;
+    overflow-x: auto;
+    padding: 10px;
+    gap: 15px;
     border-bottom: 1px solid #eee;
-    /* Hide scrollbar on some browsers for cleaner look */
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
 }
-.horizontal-users-list::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-}
-.user-item {
-    text-align: center;
-    flex-shrink: 0; /* Prevents items from squishing */
-}
-.user-profile-img {
-    width:60px; 
-    height:60px; 
-    border-radius:50%; 
-    object-fit:cover;
-    border: 2px solid #ff007f; /* Optional: Instagram-style border */
-}
-.username-label {
-    font-size: 12px; 
-    margin-top:5px;
-}
-.message-btn {
-    font-size:10px;
-}
+.horizontal-users-list::-webkit-scrollbar { display: none; }
 
+.user-item { text-align: center; flex-shrink: 0; }
+.user-profile-img { width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #ff007f; }
+.username-label { font-size: 12px; margin-top:5px; }
+.message-btn { font-size:10px; }
 
-/* -------------------- ADS STYLES -------------------- */
+.post-action-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 5px 8px;
+    transition: transform 0.1s ease-in-out;
+}
+.post-action-btn:hover { transform: scale(1.1); background-color: #f0f0f0; border-radius: 4px; }
+.post-action-btn:active { transform: scale(0.95); }
+
 .auto-view-ad {
     width: 60px; height:60px;
     background:#eee; border:1px solid #ccc; border-radius:6px;
     text-align:center; line-height:60px; font-size:10px;
     margin:10px auto; cursor:pointer;
 }
-
 #fixedClickAd {
     position:fixed; top:70px; right:10px;
     width:60px; height:60px;
     background:#ddd; border:1px solid #ccc; border-radius:6px;
-    text-align:center; line-height:60px; font-size:10px; 
+    text-align:center; line-height:60px; font-size:10px;
     z-index:1050; cursor:pointer;
     transition: all 0.3s ease-in-out;
 }
 #fixedClickAd.expanded {
     width:200px; height:250px; line-height:normal; padding:10px;
 }
-.ad-label {
-    font-size: 10px; margin: 0; text-align: center;
-    line-height: inherit;
-}
-
-/* 🎯 MEDIA QUERY: Hide Fixed Ad on Mobile (Small Screens) */
-@media (max-width: 767px) {
-    #fixedClickAd {
-        display: none !important; /* Forces removal on smaller screens */
-    }
-}
+.ad-label { font-size:10px; margin:0; text-align:center; line-height:inherit; }
+@media (max-width:767px){ #fixedClickAd{ display:none !important; } }
 </style>
 
----
-
-## 💻 Original JavaScript (Restored)
-
-```html
+<!-- -------------------- JAVASCRIPT -------------------- -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
 <script>
 function getCookie(name){
     let cookieValue=null;
-    if(document.cookie && document.cookie!==''){
+    if(document.cookie && document.cookie !== '') {
         document.cookie.split(';').forEach(c=>{
             c=c.trim();
             if(c.startsWith(name+'=')) cookieValue=decodeURIComponent(c.slice(name.length+1));
@@ -163,79 +147,88 @@ function getCookie(name){
     return cookieValue;
 }
 
-/* -------------------- LIKE BUTTONS -------------------- */
-document.querySelectorAll('.like-btn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-        const postId = btn.dataset.postId;
-        const csrftoken = getCookie('csrftoken');
-        try{
-            const res = await fetch(`/post/${postId}/like/`, {
-                method:'POST', headers:{'X-CSRFToken': csrftoken}
-            });
-            if(res.ok){
-                const countSpan = btn.querySelector('.like-count');
-                const current = parseInt(countSpan.textContent) || 0;
-                // Toggle like count (simple approach)
-                countSpan.textContent = btn.classList.contains('liked') ? current-1 : current+1;
-                btn.classList.toggle('liked');
-            }
-        }catch(err){ console.error(err); }
+const csrftoken = getCookie('csrftoken');
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // LIKE BUTTON AJAX
+    document.querySelectorAll('.like-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const postId = button.dataset.postId;
+            const url = "{% url 'like_post' 0 %}".replace("0", postId);
+            const likeCountElement = button.parentElement.querySelector('.like-count');
+            const icon = button.querySelector('i');
+
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrftoken,
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                });
+
+                if(res.ok){
+                    const data = await res.json();
+                    likeCountElement.textContent = data.total_likes;
+
+                    if(data.liked){
+                        icon.classList.remove("fa-regular");
+                        icon.classList.add("fa-solid");
+                        icon.style.color = "red"; // ❤️ liked
+                    } else {
+                        icon.classList.remove("fa-solid");
+                        icon.classList.add("fa-regular");
+                        icon.style.color = "gray"; // unliked
+                    }
+                }
+            } catch(err){ console.error(err); }
+        });
     });
-});
 
-/* -------------------- COMMENTS -------------------- */
-document.querySelectorAll('.comment-btn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-        const postId = btn.dataset.postId;
-        const input = btn.closest('.input-group').querySelector('.comment-input');
-        const text = input.value.trim();
-        if(!text) return;
+    // COMMENT BUTTON AJAX
+    document.querySelectorAll('.comment-btn').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+            const postId = btn.dataset.postId;
+            const input = btn.closest('.input-group').querySelector('.comment-input');
+            const text = input.value.trim();
+            if(!text) return;
 
-        const csrftoken = getCookie('csrftoken');
-        try{
-            const formData = new FormData();
-            formData.append('text', text);
+            try{
+                const formData = new FormData();
+                formData.append('text', text);
 
-            const res = await fetch(`/post/${postId}/comment/`, {
-                method:'POST',
-                headers:{'X-CSRFToken': csrftoken},
-                body:formData
-            });
-            if(res.ok){
-                // Append comment to list
-                const ul = btn.closest('.card-body').querySelector('.comments-list');
-                const li = document.createElement('li');
-                li.classList.add('list-group-item');
-                li.innerHTML = `<strong>{{ request.user.username }}:</strong> ${text}`;
-                ul.appendChild(li);
-                input.value='';
-            }
-        }catch(err){ console.error(err); }
+                const res = await fetch(`/post/${postId}/comment/`, {
+                    method:'POST',
+                    headers:{'X-CSRFToken': csrftoken},
+                    body: formData
+                });
+
+                if(res.ok){
+                    const ul = btn.closest('.card-body').querySelector('.comments-list');
+                    const li = document.createElement('li');
+                    li.classList.add('list-group-item');
+                    li.innerHTML = `<strong>{{ request.user.username }}:</strong> ${text}`;
+
+                    const noCommentsLi = ul.querySelector('.text-muted');
+                    if(noCommentsLi){ ul.removeChild(noCommentsLi); }
+
+                    ul.appendChild(li);
+                    input.value='';
+                }
+            } catch(err){ console.error(err); }
+        });
     });
-});
 
-/* -------------------- AUTO-VIEW ADS -------------------- */
-const autoAds = document.querySelectorAll('.auto-view-ad');
-function isInViewport(el){
-    const rect=el.getBoundingClientRect();
-    return rect.top<window.innerHeight && rect.bottom>=0;
-}
-function trackImpressions(){
-    autoAds.forEach(ad=>{
-        if(!ad.dataset.viewed && isInViewport(ad)){
-            ad.dataset.viewed='true';
-            console.log(`Auto-view ad for post ${ad.dataset.postId} counted`);
-        }
+    // FIXED AD TOGGLE
+    const clickAd = document.getElementById('fixedClickAd');
+    clickAd.addEventListener('click', ()=>{
+        clickAd.classList.toggle('expanded');
+        clickAd.innerHTML = clickAd.classList.contains('expanded') 
+            ? "<h4 style='text-align:center;'>Full Ad Content Here</h4>" 
+            : "<p class='ad-label'>Ad</p>";
     });
-}
-window.addEventListener('scroll', trackImpressions);
-window.addEventListener('load', trackImpressions);
 
-/* -------------------- FIXED CLICK-TO-VIEW AD -------------------- */
-const clickAd=document.getElementById('fixedClickAd');
-clickAd.addEventListener('click', ()=>{
-    clickAd.classList.toggle('expanded');
-    clickAd.innerHTML = clickAd.classList.contains('expanded') ? "<h4 style='text-align:center;'>Full Ad Content Here</h4>" : "<p class='ad-label'>Ad</p>";
 });
 </script>
 

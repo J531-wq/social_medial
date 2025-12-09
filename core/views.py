@@ -5,18 +5,47 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.db.models import Count
 
 from .models import Post, Comment, Message, Follow, Like
-from .forms import PostForm, SignUpForm # FIXED: Import SignUpForm
+from .forms import PostForm, SignUpForm 
 
 User = get_user_model()
 
-# -------------------- FEED --------------------
+# -------------------- FEED (LIKE BUTTON FIX) --------------------
 @login_required
 def feed(request):
-    posts = Post.objects.all().order_by('-created_at')
+    posts = Post.objects.prefetch_related('likes', 'comments', 'author').all().order_by('-created_at')
     all_users = User.objects.exclude(id=request.user.id)
+
+    # Add helper attributes for template
+    for post in posts:
+        post.total_likes_count = post.likes.count()
+        post.is_liked = post.likes.filter(id=request.user.id).exists()  # <--- key for heart color
+
     return render(request, 'core/feed.html', {'posts': posts, 'all_users': all_users})
+
+# -------------------- LIKE POST --------------------
+@login_required
+def like_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    if request.method == "POST":
+        like_obj = Like.objects.filter(user=request.user, post=post)
+        if like_obj.exists():
+            like_obj.delete()
+            liked = False
+        else:
+            Like.objects.create(user=request.user, post=post)
+            liked = True
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            new_count = post.likes.count()
+            return JsonResponse({
+                'liked': liked,
+                'total_likes': new_count
+            })
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))
 
 # -------------------- SEARCH --------------------
 @login_required
@@ -26,32 +55,23 @@ def search(request):
     posts = Post.objects.filter(caption__icontains=query).order_by('-created_at')
     return render(request, 'core/search.html', {'query': query, 'users': users, 'posts': posts})
 
-# -------------------- SIGNUP (FINAL FIX) --------------------
+# -------------------- SIGNUP --------------------
 def signup(request):
     if request.method == 'POST':
         form = SignUpForm(request.POST, request.FILES)
         if form.is_valid():
-            # FIX: The UserCreationForm automatically handles saving the user 
-            # and hashing the two password fields into the final password.
-            # Calling form.save() directly is the standard and safest way.
             user = form.save() 
-            
             messages.success(request, f"Account created for {user.username}! You can now log in.")
             return redirect('login') 
         else:
             messages.error(request, "Please correct the errors below.")
     else:
         form = SignUpForm()
-        
-    # Pass the form object to the template
     return render(request, 'core/signup.html', {'form': form}) 
 
 # -------------------- CREATE POST --------------------
 @login_required
 def create_post(request):
-    """
-    View to create a new post with image and/or caption.
-    """
     if request.method == "POST":
         form = PostForm(request.POST, request.FILES)
         if form.is_valid():
@@ -72,27 +92,6 @@ def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     comments = post.comments.all().order_by('created_at')
     return render(request, 'core/post_detail.html', {'post': post, 'comments': comments})
-
-# -------------------- LIKE POST --------------------
-@login_required
-def like_post(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    if request.method == "POST":
-        like_obj = Like.objects.filter(user=request.user, post=post)
-        if like_obj.exists():
-            like_obj.delete()
-            liked = False
-        else:
-            Like.objects.create(user=request.user, post=post)
-            liked = True
-
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({
-                'liked': liked,
-                'total_likes': post.likes.count()
-            })
-
-    return redirect(request.META.get('HTTP_REFERER', '/'))
 
 # -------------------- ADD COMMENT --------------------
 @login_required
@@ -192,15 +191,8 @@ def chat_room(request, username):
 @login_required
 @csrf_exempt
 def send_message(request, username):
-    """
-    Handles sending chat messages.
-    Supports:
-      - Text messages (JSON)
-      - File messages (FormData with audio or image)
-    """
     receiver = get_object_or_404(User, username=username)
 
-    # Handle FormData (audio/image)
     if request.method == 'POST' and request.FILES:
         content = request.POST.get('content', '').strip()
         audio_file = request.FILES.get('audio')
@@ -225,7 +217,6 @@ def send_message(request, username):
             'audio': msg.audio.url if msg.audio else None,
         })
 
-    # Handle JSON text messages
     elif request.method == 'POST':
         try:
             data = json.loads(request.body)
