@@ -39,5 +39,9 @@ urlpatterns = [
     # ------------------
     path("chat/<str:username>/", views.chat_room, name="chat_room"),
     path("send-message/<str:username>/", views.send_message, name="send_message"),
-    path("delete-message/<int:message_id>/<str:action>/", views.delete_message, name="delete_message"),
+    path(
+        "delete-message/<int:message_id>/<str:action>/",
+        views.delete_message,
+        name="delete_message"
+    ),
 ]
