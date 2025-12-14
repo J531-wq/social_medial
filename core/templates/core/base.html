@@ -11,47 +11,46 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!-- ✅ ADDED FONT AWESOME (REQUIRED FOR LIKE BUTTON ICONS) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <style>
     body {
-    background-color: whitesmoke;
-    font-family: 'Poppins', sans-serif;
-    color: #444;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    padding-top: 85px; /* navbar space */
+      background-color: whitesmoke;
+      font-family: 'Poppins', sans-serif;
+      color: #444;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-top: 85px; /* navbar space */
     }
 
     .navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1050; 
-    background-color: #f4f3d9 !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    padding: 0.8rem 1rem;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1050; 
+      background-color: #f4f3d9 !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      padding: 0.8rem 1rem;
     }
 
     .navbar.scrolled {
-    background-color: #f5f4dc !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      background-color: #f5f4dc !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
 
     #weblogo {
-    height: 55px;
-    width: auto;
-    border-radius: 6px;
-    border: 2px solid purple;
-    object-fit: cover;
+      height: 55px;
+      width: auto;
+      border-radius: 6px;
+      border: 2px solid purple;
+      object-fit: cover;
     }
 
     .navbar .btn {
-    border-radius: 20px;
-    font-weight: 500;
-    margin-left: 0.4rem;
+      border-radius: 20px;
+      font-weight: 500;
+      margin-left: 0.4rem;
     }
 
     .search-form {
@@ -71,22 +70,24 @@
     }
 
     footer {
-    background: white;
-    margin-top: auto;
-    text-align: center;
-    padding: 1rem 0;
-    border-top: 1px solid #eee;
+      background: white;
+      margin-top: auto;
+      text-align: center;
+      padding: 1rem 0;
+      border-top: 1px solid #eee;
     }
   </style>
 </head>
 
 <body>
 
+  <!-- NAVBAR -->
   <nav class="navbar navbar-expand-md" id="mainNavbar">
     <div class="container">
       
+      <!-- LOGO ALWAYS VISIBLE -->
       <a class="navbar-brand" href="{% url 'feed' %}">
-        <img id="weblogo" src="media/profiles/ChatGPT_Image_Sep_10_2025_03_52_01_PM.png" alt="Social App Logo">
+        <img id="weblogo" src="media/profiles/ChatGPT_Image_Sep_10_2025_03_52_01_PM.png" alt="">
       </a>
       
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,11 +98,13 @@
         
         <div class="d-flex flex-column flex-md-row align-items-md-center w-100 w-md-auto">
           
+          <!-- SEARCH FORM -->
           <form class="d-flex search-form w-100 w-md-auto mb-2 mb-md-0" action="{% url 'search' %}" method="get">
             <input class="form-control form-control-sm" name="q" type="search" placeholder="Search..." required>
             <button class="btn btn-outline-success btn-sm ms-1" type="submit">🔍</button>
           </form>
 
+          <!-- NAV BUTTONS -->
           {% if user.is_authenticated %}
             <a href="{% url 'feed' %}" class="btn btn-outline-primary">Home</a>
             <a href="{% url 'create_post' %}" class="btn btn-outline-primary">Post</a>
@@ -123,14 +126,17 @@
     </div>
   </nav>
 
+  <!-- MAIN CONTENT -->
   <div class="container py-4">
     {% block content %}{% endblock %}
   </div>
 
+  <!-- FOOTER -->
   <footer>
-    <p>© 2025 SocialApp. All rights reserved.</p>
+    <p>© Jmedia 2025. All rights reserved.</p>
   </footer>
 
+  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const navbar = document.getElementById('mainNavbar');
