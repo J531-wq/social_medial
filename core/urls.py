@@ -4,9 +4,14 @@ from . import views
 
 urlpatterns = [
     # ------------------
+    # Homepage for Render
+    # ------------------
+    path("", views.home, name="home"),  # <-- This makes the root URL work
+
+    # ------------------
     # Main Feed
     # ------------------
-    path("", views.feed, name="feed"),
+    path("feed/", views.feed, name="feed"),
 
     # ------------------
     # Search

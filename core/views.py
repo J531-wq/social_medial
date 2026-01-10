@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.db.models import Q
@@ -12,6 +12,10 @@ from .models import Post, Comment, Message, Follow, Like
 from .forms import PostForm, SignUpForm
 
 User = get_user_model()
+
+# ====================== HOMEPAGE FOR RENDER ======================
+def home(request):
+    return HttpResponse("Django app is running!")
 
 # ====================== FEED ======================
 @login_required
@@ -177,11 +181,11 @@ def follow_toggle(request, username):
     return JsonResponse({
         "state": state,
         "followers_count": Follow.objects.filter(following=target_user).count(),
-        "following_count": Follow.objects.filter(follower=target_user).count(),
+        "following_count": Follow.objects.filter(follower=request.user).count(),
     })
 
 
-# ====================== CHAT ROOM (PERMANENT DELETE SAFE) ======================
+# ====================== CHAT ROOM ======================
 @login_required
 def chat_room(request, username):
     other_user = get_object_or_404(User, username=username)
@@ -255,7 +259,7 @@ def send_message(request, username):
     })
 
 
-# ====================== DELETE MESSAGE (FINAL & PERMANENT) ======================
+# ====================== DELETE MESSAGE ======================
 @login_required
 @require_POST
 def delete_message(request, message_id, action):
